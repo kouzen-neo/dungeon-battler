@@ -4,8 +4,8 @@ import React, { useEffect, useRef } from 'react';
 import { palette } from '@/lib/assets/palette';
 
 interface BattleCanvasProps {
-  partySprites: number[][][];
-  enemySprites: number[][][];
+  partySprites: number[][][][];
+  enemySprites: number[][][][];
   attackingId: string | null;
   targetId: string | null;
   damagePopups: Array<{ id: number, value: number, x: number, y: number }>;

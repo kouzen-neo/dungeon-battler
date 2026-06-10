@@ -81,15 +81,15 @@ export default function GachaPage() {
             <div className="relative">
                <div className="w-56 h-72 bg-slate-900 border-4 border-red-500 rounded-[40px] p-6 shadow-[0_0_60px_rgba(220,38,38,0.4)] flex flex-col items-center justify-center gap-4 relative z-10 overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-5">
-                    <span className="text-9xl font-black italic">{result.rarity}</span>
+                    <span className="text-9xl font-black italic">{result?.rarity}</span>
                   </div>
-                  <span className="text-7xl">{result.icon}</span>
+                  <span className="text-7xl">{result?.icon}</span>
                   <div className="text-center">
                     <span className="text-[10px] bg-red-600 px-3 py-1 rounded-full font-bold uppercase mb-2 inline-block">
-                      {result.rarity}
+                      {result?.rarity}
                     </span>
-                    <h2 className="text-2xl font-black tracking-tight">{result.name}</h2>
-                    <p className="text-xs font-bold text-slate-500 uppercase">{result.type}</p>
+                    <h2 className="text-2xl font-black tracking-tight">{result?.name}</h2>
+                    <p className="text-xs font-bold text-slate-500 uppercase">{result?.type}</p>
                   </div>
                </div>
                <div className="absolute inset-0 bg-white blur-3xl opacity-20 scale-110" />
