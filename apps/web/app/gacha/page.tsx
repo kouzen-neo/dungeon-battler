@@ -5,6 +5,7 @@ import { useHeroStore, OwnedHero } from '@/lib/stores/heroStore';
 import { useStoryStore } from '@/lib/game/storyProgress';
 import { Coins, Sparkles, ChevronLeft, Ticket } from 'lucide-react';
 import Link from 'next/link';
+import PixelSprite from '@/components/ui/PixelSprite';
 
 export default function GachaPage() {
   const pullGacha = useHeroStore((state) => state.pullGacha);
@@ -83,7 +84,7 @@ export default function GachaPage() {
                   <div className="absolute top-0 right-0 p-4 opacity-5">
                     <span className="text-9xl font-black italic">{result?.rarity}</span>
                   </div>
-                  <span className="text-7xl">{result?.icon}</span>
+                  {result && <PixelSprite spriteId={result.id} element={result.baseStats.element} size={96} />}
                   <div className="text-center">
                     <span className="text-[10px] bg-red-600 px-3 py-1 rounded-full font-bold uppercase mb-2 inline-block">
                       {result?.rarity}

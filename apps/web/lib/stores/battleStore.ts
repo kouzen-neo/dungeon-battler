@@ -1,12 +1,15 @@
 import { create } from "zustand";
 import { CombatStats, calculateDamage, determineTurnOrder } from "../game/combat";
 
-interface BattleUnit {
+export type UnitPosition = 'FRONT' | 'MID' | 'BACK' | 'ENEMY';
+
+export interface BattleUnit {
   id: string;
   name: string;
   stats: CombatStats;
   currentHp: number;
   isEnemy: boolean;
+  position: UnitPosition;
 }
 
 interface BattleState {
@@ -26,6 +29,7 @@ interface BattleState {
   startBattle: (party: BattleUnit[], enemies: BattleUnit[]) => void;
   nextTurn: () => void;
   attack: (targetId: string) => Promise<void>;
+  swapPositions: (id1: string, id2: string) => void;
   addLog: (log: string) => void;
   resetBattle: () => void;
 }
@@ -135,6 +139,31 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     if (!allEnemiesDead && !allPlayerDead) {
       get().nextTurn();
     }
+  },
+
+  swapPositions: (id1, id2) => {
+    const { playerParty, addLog, nextTurn } = get();
+    const unit1 = playerParty.find(u => u.id === id1);
+    const unit2 = playerParty.find(u => u.id === id2);
+
+    if (!unit1 || !unit2) return;
+
+    const pos1 = unit1.position;
+    const pos2 = unit2.position;
+
+    const nextParty = playerParty.map(u => {
+      if (u.id === id1) return { ...u, position: pos2 };
+      if (u.id === id2) return { ...u, position: pos1 };
+      return u;
+    });
+
+    set({ 
+      playerParty: nextParty,
+      turnOrder: determineTurnOrder([...nextParty, ...get().enemies])
+    });
+
+    addLog(`${unit1.name} swapped positions with ${unit2.name}!`);
+    nextTurn();
   },
 
   nextTurn: () => {

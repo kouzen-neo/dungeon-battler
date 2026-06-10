@@ -5,6 +5,7 @@ import { useHeroStore, OwnedHero } from '@/lib/stores/heroStore';
 import { useStoryStore } from '@/lib/game/storyProgress';
 import { Coins, User, Shield, Sword, Zap, Heart, Sparkles, ArrowUpCircle } from 'lucide-react';
 import Link from 'next/link';
+import PixelSprite from '@/components/ui/PixelSprite';
 
 export default function ProfilePage() {
   const { ownedHeroes, partyIds, setParty, levelUpHero } = useHeroStore();
@@ -53,8 +54,8 @@ export default function ProfilePage() {
           </div>
           
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center text-4xl border border-slate-800">
-              {selectedHero.icon}
+            <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-800 overflow-hidden">
+              <PixelSprite spriteId={selectedHero.id} element={selectedHero.baseStats.element} size={48} />
             </div>
             <div>
               <h2 className="text-xl font-black">{selectedHero.name}</h2>
@@ -105,8 +106,8 @@ export default function ProfilePage() {
                   ${isSelected ? 'border-red-500 bg-red-950/20' : 'border-slate-900 bg-slate-900/50'}
                 `}
               >
-                <span className="text-2xl">{hero.icon}</span>
-                <span className="text-[10px] font-bold text-slate-400 truncate w-full px-1">{hero.name.split(' ')[0]}</span>
+                <PixelSprite spriteId={hero.id} element={hero.baseStats.element} size={36} cropToHead={true} />
+                <span className="text-[10px] font-bold text-slate-400 truncate w-full px-1 text-center">{hero.name.split(' ')[0]}</span>
                 
                 <div 
                   onClick={(e) => { e.stopPropagation(); toggleParty(hero.instanceId); }}
