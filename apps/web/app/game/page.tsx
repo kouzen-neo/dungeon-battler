@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import BattleCanvas from '@/components/game/BattleCanvas';
 import ActionButtons from '@/components/game/ActionButtons';
 import PartyStatus from '@/components/game/PartyStatus';
@@ -19,7 +19,7 @@ import { storyChapter1 } from '@/lib/game/storyData';
 import { Trophy, Home, Coins, Flag } from 'lucide-react';
 import Link from 'next/link';
 
-export default function GamePage() {
+function GamePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const floorNum = parseInt(searchParams.get('floor') || '1');
@@ -169,5 +169,17 @@ export default function GamePage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function GamePage() {
+  return (
+    <Suspense fallback={
+      <main className="flex flex-col min-h-screen bg-slate-950 text-white p-4 max-w-md mx-auto items-center justify-center">
+        <div className="text-xl font-black italic text-red-500 animate-pulse">LOADING BATTLE...</div>
+      </main>
+    }>
+      <GamePageContent />
+    </Suspense>
   );
 }
