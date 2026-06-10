@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  password         String
+  gems             Int               @default(0)
+  gold             Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  heroes           Hero[]
+  party            Party?
+  storyProgress    StoryProgress?
+  endlessProgress  EndlessProgress?
+  inventory        Inventory[]
+  transactions     Transaction[]
+  leaderboardEntry Leaderboard?
+}
+
+model Hero {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  name      String
+  type      String    // Warrior, Mage, Rogue, etc.
+  level     Int       @default(1)
+  stars     Int       @default(1)
+  exp       Int       @default(0)
+  hp        Int
+  atk       Int
+  def       Int
+  spd       Int
+  upgrades  Upgrade[]
+  createdAt DateTime  @default(now())
+
+  // Relations for Party positions
+  partyPos1 Party[] @relation("Hero1")
+  partyPos2 Party[] @relation("Hero2")
+  partyPos3 Party[] @relation("Hero3")
+}
+
+model Party {
+  id      String @id @default(cuid())
+  userId  String @unique
+  user    User   @relation(fields: [userId], references: [id])
+  hero1Id String
+  hero1   Hero   @relation("Hero1", fields: [hero1Id], references: [id])
+  hero2Id String
+  hero2   Hero   @relation("Hero2", fields: [hero2Id], references: [id])
+  hero3Id String
+  hero3   Hero   @relation("Hero3", fields: [hero3Id], references: [id])
+}
+
+model StoryProgress {
+  id                String @id @default(cuid())
+  userId            String @unique
+  user              User   @relation(fields: [userId], references: [id])
+  currentStage      Int    @default(1)
+  maxStageReached   Int    @default(1)
+  starsEarned       Int    @default(0)
+}
+
+model EndlessProgress {
+  id              String @id @default(cuid())
+  userId          String @unique
+  user            User   @relation(fields: [userId], references: [id])
+  maxFloorReached Int    @default(0)
+  highScore       Int    @default(0)
+}
+
+model Upgrade {
+  id        String @id @default(cuid())
+  heroId    String
+  hero      Hero   @relation(fields: [heroId], references: [id])
+  statType  String // HP, ATK, DEF, SPD
+  level     Int    @default(0)
+  costGold  Int
+}
+
+model Inventory {
+  id        String @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+  itemType  String // Potion, Equipment, Material
+  itemId    String
+  quantity  Int    @default(1)
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Float
+  currency  String   @default("USD")
+  status    String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  createdAt DateTime @default(now())
+}
+
+model Leaderboard {
+  id       String @id @default(cuid())
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id])
+  score    Int    @default(0)
+  rank     Int?
+  seasonId String
+}
