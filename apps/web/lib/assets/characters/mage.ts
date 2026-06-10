@@ -1,29 +1,22 @@
-const C = {
-  TRANS: [0, 0, 0, 0],
-  BLUE:  [30, 144, 255, 255],
-  DK_BLU:[0, 0, 139, 255],
-  BROWN: [139, 69, 19, 255],
-  BLACK: [0, 0, 0, 255],
-  WHITE: [255, 255, 255, 255],
-  SKIN:  [255, 224, 189, 255],
-  GOLD:  [255, 215, 0, 255],
-};
+import { T, E, D, S, M, m, B, W, b } from '../spriteSystem';
 
-export const mageSprite = [
-  [C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.DK_BLU,C.DK_BLU,C.DK_BLU,C.DK_BLU, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.BLUE, C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.GOLD, C.TRANS, C.TRANS, C.BLUE,   C.BLUE, C.BLACK, C.BLACK, C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE, C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.GOLD, C.TRANS, C.TRANS, C.BLUE,   C.SKIN,C.SKIN,  C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE, C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.GOLD, C.TRANS, C.TRANS, C.BLUE,   C.SKIN,C.BLACK, C.SKIN,  C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE, C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.BROWN,C.TRANS, C.TRANS, C.BLUE,   C.BLUE, C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE, C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.BROWN,C.TRANS, C.DK_BLU,C.DK_BLU,C.DK_BLU,C.DK_BLU,C.DK_BLU,C.DK_BLU,C.DK_BLU,C.DK_BLU,C.DK_BLU,C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.DK_BLU,C.DK_BLU,C.DK_BLU,C.BLUE,  C.BLUE,   C.BLUE, C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE, C.BLUE,  C.TRANS, C.TRANS, C.TRANS],
-  [C.DK_BLU,C.BLUE,  C.DK_BLU,C.BLUE,  C.BLUE,   C.BLUE, C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE, C.BLUE,  C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.DK_BLU,C.TRANS, C.DK_BLU,C.DK_BLU,C.BLUE,  C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE,   C.BLUE,   C.DK_BLU,C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.BLUE,   C.BLUE, C.DK_BLU, C.TRANS, C.TRANS, C.BLUE,   C.BLUE,   C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.BLUE,   C.BLUE, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.BLUE,   C.BLUE, C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.DK_BLU,C.DK_BLU,C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.DK_BLU,C.DK_BLU,C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS],
-  [C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS, C.TRANS]
+// MAGE — Tall pointed wizard hat, narrow body, wide flaring robe, staff on left
+// Distinctive silhouette: tall vertical hat + triangular robe flare = unique outline
+export const mageSpriteData: number[][] = [
+  [T, T, T, T, T, T, T, E, T, T, T, T, T, T, T, T], // hat tip
+  [T, T, T, T, T, T, E, E, E, T, T, T, T, T, T, T], // hat
+  [T, T, T, T, T, E, E, E, E, E, T, T, T, T, T, T],
+  [T, T, T, T, E, E, E, E, E, E, E, T, T, T, T, T],
+  [T, T, T, T, D, D, D, D, D, D, D, T, T, T, T, T], // hat brim (dark band)
+  [T, T, T, T, T, S, S, S, S, S, T, T, T, T, T, T], // face
+  [T, T, T, T, T, S, B, S, B, S, T, T, T, T, T, T], // eyes
+  [T, T, T, T, T, S, S, S, S, S, T, T, T, T, T, T],
+  [T, T, T, T, E, E, E, E, E, E, E, T, T, T, T, T], // robe top
+  [T, M, T, T, E, E, E, E, E, E, E, T, T, T, T, T], // staff (M) + robe
+  [T, M, T, E, E, E, E, E, E, E, E, E, T, T, T, T], // robe widens
+  [T, M, T, E, E, E, E, E, E, E, E, E, T, T, T, T],
+  [T, T, E, E, E, E, E, E, E, E, E, E, E, T, T, T], // robe flare
+  [T, T, T, E, E, T, T, T, T, T, E, E, T, T, T, T], // feet
+  [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T],
+  [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T],
 ];

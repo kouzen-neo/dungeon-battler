@@ -1,13 +1,13 @@
 "use client";
 
 import React from 'react';
-import { Sword, Shield, FlaskConical, Flag } from 'lucide-react';
+import { Sword, Shield, FlaskConical, Repeat } from 'lucide-react';
 
 interface ActionButtonsProps {
   onAttack: () => void;
   onSkill: () => void;
   onItem: () => void;
-  onRun: () => void;
+  onSwap: () => void;
   disabled?: boolean;
 }
 
@@ -15,7 +15,7 @@ export default function ActionButtons({
   onAttack,
   onSkill,
   onItem,
-  onRun,
+  onSwap,
   disabled
 }: ActionButtonsProps) {
   return (
@@ -48,12 +48,12 @@ export default function ActionButtons({
       </button>
 
       <button
-        onClick={onRun}
+        onClick={onSwap}
         disabled={disabled}
-        className="flex items-center justify-center gap-2 h-14 text-lg font-bold bg-slate-700 hover:bg-slate-600 active:scale-95 transition-all rounded-xl border-b-4 border-slate-900 text-white disabled:opacity-50"
+        className="flex items-center justify-center gap-2 h-14 text-lg font-bold bg-amber-700 hover:bg-amber-600 active:scale-95 transition-all rounded-xl border-b-4 border-amber-900 text-white disabled:opacity-50"
       >
-        <Flag size={24} />
-        RUN
+        <Repeat size={24} />
+        SWAP POS
       </button>
     </div>
   );
