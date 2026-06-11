@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Sword, Shield, FlaskConical, Repeat } from 'lucide-react';
+import { Sword, Shield, FlaskConical, Repeat, Axe, Flame, Crosshair, Sun, Ghost, Zap } from 'lucide-react';
 
 interface ActionButtonsProps {
   onAttack: () => void;
@@ -12,6 +12,17 @@ interface ActionButtonsProps {
   skillName?: string;
   skillCooldown?: number;
 }
+
+const getSkillIcon = (name?: string) => {
+  if (!name) return <Shield size={18} />;
+  const n = name.toLowerCase();
+  if (n.includes('cleave') || n.includes('slash') || n.includes('strike')) return <Axe size={18} />;
+  if (n.includes('elemental') || n.includes('burst') || n.includes('fire')) return <Flame size={18} />;
+  if (n.includes('assassinate')) return <Crosshair size={18} />;
+  if (n.includes('holy') || n.includes('light') || n.includes('heal')) return <Sun size={18} />;
+  if (n.includes('shadow')) return <Ghost size={18} />;
+  return <Zap size={18} />;
+};
 
 export default function ActionButtons({
   onAttack,
@@ -39,7 +50,7 @@ export default function ActionButtons({
         className="relative flex flex-col items-center justify-center h-14 bg-blue-700 hover:bg-blue-600 active:scale-95 transition-all rounded-xl border-b-4 border-blue-900 text-white disabled:opacity-50 overflow-hidden"
       >
         <div className="flex items-center gap-1 font-bold">
-          <Shield size={18} />
+          {getSkillIcon(skillName)}
           {skillName || "SKILL"}
         </div>
         {skillCooldown > 0 && (
