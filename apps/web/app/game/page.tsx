@@ -60,12 +60,33 @@ function GamePageContent() {
   const isShaking = useBattleStore((state) => state.isShaking);
   const [isSwapping, setIsSwapping] = useState(false);
   const [isItemMenuOpen, setIsItemMenuOpen] = useState(false);
+  const [autoTimer, setAutoTimer] = useState(5);
   const completeFloor = useStoryStore((state) => state.completeFloor);
   const persistAll = useSaveStore((state) => state.persistAll);
   const resetBattle = useBattleStore((state) => state.resetBattle);
   const swapPositions = useBattleStore((state) => state.swapPositions);
   
   const { inventory, consumeItem } = useShopStore();
+
+  // Auto-Continue Logic
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isBattleOver && winner === 'player' && isAutoBattle) {
+      setAutoTimer(5);
+      interval = setInterval(() => {
+        setAutoTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            const mockEvent = { preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent;
+            handleVictory(mockEvent);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isBattleOver, winner, isAutoBattle]);
 
   useEffect(() => {
     const activeParty = partyIds
@@ -248,12 +269,29 @@ function GamePageContent() {
                   <Coins className="text-yellow-500" size={16} />
                   <span className="text-xl font-black text-yellow-500">+{floorData.rewardGold}</span>
                 </div>
-                <button 
-                  onClick={handleVictory}
-                  className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl shadow-[0_4px_0_rgb(153,27,27)] active:translate-y-1 active:shadow-none transition-all cursor-pointer"
-                >
-                  LANJUTKAN
-                </button>
+                
+                <div className="flex flex-col w-full gap-3">
+                  <button 
+                    onClick={handleVictory}
+                    className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl shadow-[0_4px_0_rgb(153,27,27)] active:translate-y-1 active:shadow-none transition-all cursor-pointer relative overflow-hidden"
+                  >
+                    {isAutoBattle ? (
+                      <div className="flex flex-col leading-tight">
+                        <span>CONTINUE NOW</span>
+                        <span className="text-[10px] opacity-60 uppercase">Auto-next in {autoTimer}s</span>
+                      </div>
+                    ) : (
+                      "LANJUTKAN"
+                    )}
+                  </button>
+                  
+                  <button 
+                    onClick={() => router.push('/')}
+                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all text-xs uppercase"
+                  >
+                    KEMBALI KE HOME
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center">

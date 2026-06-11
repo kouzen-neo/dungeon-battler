@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useHeroStore, OwnedHero } from '@/lib/stores/heroStore';
 import { useStoryStore } from '@/lib/game/storyProgress';
-import { Coins, User, Shield, Sword, Zap, Heart, Sparkles, ArrowUpCircle, Volume2, VolumeX, Book } from 'lucide-react';
+import { Coins, User, Shield, Sword, Zap, Heart, Sparkles, ArrowUpCircle, Volume2, VolumeX, Book, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import PixelSprite from '@/components/ui/PixelSprite';
 import { useAudioStore } from '@/lib/stores/audioStore';

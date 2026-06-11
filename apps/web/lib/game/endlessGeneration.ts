@@ -22,8 +22,8 @@ export const generateEndlessEnemies = (floor: number): EndlessEnemy[] => {
   
   const enemies: EndlessEnemy[] = [];
   
-  // Scaling factors
-  const statMult = 1 + (floor * 0.1); // +10% stats per floor
+  // Scaling factors: steeper exponential curve
+  const statMult = 1 + (floor * 0.15) + Math.pow(floor, 1.2) * 0.05;
   
   for (let i = 0; i < enemyCount; i++) {
     const type = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
