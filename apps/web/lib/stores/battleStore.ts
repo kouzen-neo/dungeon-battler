@@ -96,9 +96,14 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     const damage = calculateDamage(attacker.stats, target.stats);
     const newHp = Math.max(0, target.currentHp - damage);
 
-    // Add Popup
-    const popupX = target.isEnemy ? 300 : 80;
-    const popupY = 150;
+    const targetIndex = target.isEnemy 
+      ? enemies.findIndex(e => e.id === target.id)
+      : playerParty.findIndex(p => p.id === target.id);
+      
+    // Exact canvas coordinates for accuracy
+    const popupX = target.isEnemy ? 400 - 120 - (targetIndex === 1 ? 20 : 0) : 60 + (targetIndex === 1 ? 20 : 0);
+    const popupY = target.isEnemy ? 60 + (targetIndex * 60) : 300 - 120 - (targetIndex * 50);
+    
     const newPopup = { id: Date.now(), value: damage, x: popupX, y: popupY };
     set(state => ({ damagePopups: [...state.damagePopups, newPopup] }));
 
@@ -172,7 +177,9 @@ export const useBattleStore = create<BattleState>((set, get) => ({
         if (u.currentHp > 0) {
           const healAmount = Math.floor(u.stats.hp * skill.healPercentage!);
           const healedHp = Math.min(u.stats.hp, u.currentHp + healAmount);
-          popups.push({ id: Date.now() + i, value: -healAmount, x: 80, y: 150 - i*20 }); // Negative value shows as green/heal usually, but we'll just show it
+          const px = 60 + (i === 1 ? 20 : 0);
+          const py = 300 - 120 - (i * 50);
+          popups.push({ id: Date.now() + i, value: -healAmount, x: px, y: py }); 
           return { ...u, currentHp: healedHp };
         }
         return u;
@@ -190,13 +197,16 @@ export const useBattleStore = create<BattleState>((set, get) => ({
         if (targets.length === 0) targets = [nextEnemies.filter(e => e.currentHp > 0)[0]]; // fallback
       } // ALL_ENEMIES keeps all alive targets
 
-      targets.forEach((target, i) => {
+      targets.forEach((target, j) => {
+        const i = nextEnemies.findIndex(e => e.id === target.id);
         // We override the attacker's ATK with multiplier before calculating damage
         const tempStats = { ...caster.stats, atk: caster.stats.atk * (skill.damageMultiplier || 1) };
         const damage = calculateDamage(tempStats, target.stats);
         const newHp = Math.max(0, target.currentHp - damage);
         
-        popups.push({ id: Date.now() + i, value: damage, x: 300, y: 150 - i*20 });
+        const px = 400 - 120 - (i === 1 ? 20 : 0);
+        const py = 60 + (i * 60);
+        popups.push({ id: Date.now() + j, value: damage, x: px, y: py });
         
         nextEnemies = nextEnemies.map(e => e.id === target.id ? { ...e, currentHp: newHp } : e);
         if (newHp === 0) {
