@@ -127,7 +127,7 @@ export default function BattleCanvas({
         }
         
         // Hit Animation (Shake)
-        if (targetId === id) {
+        if (targetId?.includes(id)) {
           x += Math.sin(frame * 0.8) * 8;
           ctx.filter = 'brightness(200%) sepia(100%) hue-rotate(-50deg) saturate(500%)';
         }
@@ -152,7 +152,7 @@ export default function BattleCanvas({
           ctx.globalAlpha = 1.0;
         }
 
-        if (targetId === id) {
+        if (targetId?.includes(id)) {
           x += Math.sin(frame * 0.8) * 8;
           ctx.filter = 'brightness(200%) sepia(100%) hue-rotate(-50deg) saturate(500%)';
         }
@@ -166,12 +166,32 @@ export default function BattleCanvas({
       if (activeSkillName) {
         const skillName = activeSkillName.toLowerCase();
         
+        // Find target center
+        let tx = canvas.width - 120;
+        let ty = 120;
+        
+        if (targetId) {
+          const firstTargetId = targetId.split(',')[0];
+          // Try to find if it's an enemy
+          const eIdx = enemyIds.indexOf(firstTargetId);
+          if (eIdx !== -1) {
+            tx = canvas.width - 120 - (eIdx === 1 ? 20 : 0) + (SPRITE_SIZE*PIXEL_SIZE)/2;
+            ty = 60 + (eIdx * 60) + (SPRITE_SIZE*PIXEL_SIZE)/2;
+          } else {
+            const pIdx = partyIds.indexOf(firstTargetId);
+            if (pIdx !== -1) {
+              tx = 60 + (pIdx === 1 ? 20 : 0) + (SPRITE_SIZE*PIXEL_SIZE)/2;
+              ty = canvas.height - 120 - (pIdx * 50) + (SPRITE_SIZE*PIXEL_SIZE)/2;
+            }
+          }
+        }
+        
         ctx.save();
         if (skillName.includes('cleave') || skillName.includes('slash') || skillName.includes('strike')) {
-          // Giant white/red sweep across enemies
+          // Slash centered on tx, ty
           ctx.beginPath();
-          ctx.moveTo(canvas.width - 220, 20);
-          ctx.lineTo(canvas.width - 40, canvas.height - 20);
+          ctx.moveTo(tx - 60, ty - 80);
+          ctx.lineTo(tx + 80, ty + 60);
           ctx.strokeStyle = `rgba(255, 255, 255, ${Math.random()})`;
           ctx.lineWidth = 15;
           ctx.stroke();
@@ -179,36 +199,36 @@ export default function BattleCanvas({
           ctx.lineWidth = 30;
           ctx.stroke();
         } else if (skillName.includes('elemental') || skillName.includes('burst') || skillName.includes('fire')) {
-          // Giant flickering explosions
+          // Giant flickering explosions around target area
           for(let i=0; i<4; i++) {
             ctx.beginPath();
-            ctx.arc(canvas.width - 120 + (Math.random()*80-40), 150 + (Math.random()*120-60), 30 + Math.random()*50, 0, Math.PI*2);
+            ctx.arc(tx + (Math.random()*80-40), ty + (Math.random()*80-40), 30 + Math.random()*50, 0, Math.PI*2);
             ctx.fillStyle = `rgba(239, 68, 68, ${Math.random() * 0.8})`; // red-500
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(canvas.width - 120 + (Math.random()*80-40), 150 + (Math.random()*120-60), 20 + Math.random()*30, 0, Math.PI*2);
+            ctx.arc(tx + (Math.random()*80-40), ty + (Math.random()*80-40), 20 + Math.random()*30, 0, Math.PI*2);
             ctx.fillStyle = `rgba(250, 204, 21, ${Math.random() * 0.9})`; // yellow-400
             ctx.fill();
           }
         } else if (skillName.includes('holy') || skillName.includes('light') || skillName.includes('heal')) {
           // Golden/Green columns of light over party
           ctx.fillStyle = `rgba(132, 204, 22, ${Math.random() * 0.3})`; // lime-500
-          ctx.fillRect(30, 0, 120, canvas.height);
+          ctx.fillRect(tx - 60, 0, 120, canvas.height);
           ctx.fillStyle = `rgba(254, 240, 138, ${Math.random() * 0.6})`; // yellow-200
-          ctx.fillRect(60, 0, 60, canvas.height);
+          ctx.fillRect(tx - 30, 0, 60, canvas.height);
         } else if (skillName.includes('assassinate') || skillName.includes('shadow')) {
-          // Screen darkens, sharp purple slash
+          // Screen darkens, sharp purple slash exactly on tx, ty
           ctx.fillStyle = `rgba(0, 0, 0, 0.6)`;
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.beginPath();
-          ctx.moveTo(canvas.width - 160, 60);
-          ctx.lineTo(canvas.width - 60, 240);
+          ctx.moveTo(tx - 50, ty - 50);
+          ctx.lineTo(tx + 50, ty + 50);
           ctx.strokeStyle = `rgba(168, 85, 247, ${Math.random()})`; // purple-500
           ctx.lineWidth = 12;
           ctx.stroke();
           ctx.beginPath();
-          ctx.moveTo(canvas.width - 60, 60);
-          ctx.lineTo(canvas.width - 160, 240);
+          ctx.moveTo(tx + 50, ty - 50);
+          ctx.lineTo(tx - 50, ty + 50);
           ctx.stroke();
         }
         ctx.restore();
