@@ -160,6 +160,7 @@ function GamePageContent() {
             activeUnitId={currentUnit?.id}
             partyIds={playerParty.map(u => u.id)}
             enemyIds={enemies.map(u => u.id)}
+            activeSkillName={activeSkillName}
           />
         </div>
         

@@ -12,6 +12,7 @@ interface BattleCanvasProps {
   activeUnitId?: string | null;
   partyIds: string[];
   enemyIds: string[];
+  activeSkillName?: string | null;
 }
 
 const PIXEL_SIZE = 4;
@@ -43,7 +44,8 @@ export default function BattleCanvas({
   damagePopups,
   activeUnitId,
   partyIds,
-  enemyIds
+  enemyIds,
+  activeSkillName
 }: BattleCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
@@ -160,6 +162,58 @@ export default function BattleCanvas({
         ctx.filter = 'none';
       });
 
+      // Skill Animations
+      if (activeSkillName) {
+        const skillName = activeSkillName.toLowerCase();
+        
+        ctx.save();
+        if (skillName.includes('cleave') || skillName.includes('slash') || skillName.includes('strike')) {
+          // Giant white/red sweep across enemies
+          ctx.beginPath();
+          ctx.moveTo(canvas.width - 220, 20);
+          ctx.lineTo(canvas.width - 40, canvas.height - 20);
+          ctx.strokeStyle = `rgba(255, 255, 255, ${Math.random()})`;
+          ctx.lineWidth = 15;
+          ctx.stroke();
+          ctx.strokeStyle = `rgba(220, 38, 38, ${Math.random() * 0.5})`; // red-600
+          ctx.lineWidth = 30;
+          ctx.stroke();
+        } else if (skillName.includes('elemental') || skillName.includes('burst') || skillName.includes('fire')) {
+          // Giant flickering explosions
+          for(let i=0; i<4; i++) {
+            ctx.beginPath();
+            ctx.arc(canvas.width - 120 + (Math.random()*80-40), 150 + (Math.random()*120-60), 30 + Math.random()*50, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(239, 68, 68, ${Math.random() * 0.8})`; // red-500
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(canvas.width - 120 + (Math.random()*80-40), 150 + (Math.random()*120-60), 20 + Math.random()*30, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(250, 204, 21, ${Math.random() * 0.9})`; // yellow-400
+            ctx.fill();
+          }
+        } else if (skillName.includes('holy') || skillName.includes('light') || skillName.includes('heal')) {
+          // Golden/Green columns of light over party
+          ctx.fillStyle = `rgba(132, 204, 22, ${Math.random() * 0.3})`; // lime-500
+          ctx.fillRect(30, 0, 120, canvas.height);
+          ctx.fillStyle = `rgba(254, 240, 138, ${Math.random() * 0.6})`; // yellow-200
+          ctx.fillRect(60, 0, 60, canvas.height);
+        } else if (skillName.includes('assassinate') || skillName.includes('shadow')) {
+          // Screen darkens, sharp purple slash
+          ctx.fillStyle = `rgba(0, 0, 0, 0.6)`;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.beginPath();
+          ctx.moveTo(canvas.width - 160, 60);
+          ctx.lineTo(canvas.width - 60, 240);
+          ctx.strokeStyle = `rgba(168, 85, 247, ${Math.random()})`; // purple-500
+          ctx.lineWidth = 12;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(canvas.width - 60, 60);
+          ctx.lineTo(canvas.width - 160, 240);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
       // Spawn new particles on damage popup
       if (damagePopups.length > prevPopupsLength.current) {
         const newPopups = damagePopups.slice(prevPopupsLength.current);
@@ -236,7 +290,7 @@ export default function BattleCanvas({
 
     render();
     return () => cancelAnimationFrame(animationFrameId);
-  }, [partySprites, enemySprites, attackingId, targetId, damagePopups, activeUnitId]);
+  }, [partySprites, enemySprites, attackingId, targetId, damagePopups, activeUnitId, activeSkillName]);
 
   return (
     <canvas

@@ -11,7 +11,8 @@ export const useBattle = () => {
     attack, 
     useSkill,
     useItem,
-    startBattle 
+    startBattle,
+    activeSkillName
   } = useBattleStore();
 
   const currentUnit = turnOrder[currentTurnIndex];
@@ -60,6 +61,7 @@ export const useBattle = () => {
     attack,
     useSkill,
     useItem,
-    startBattle
+    startBattle,
+    activeSkillName
   };
 };

@@ -27,6 +27,7 @@ interface BattleState {
   // Animation State
   attackingId: string | null;
   targetId: string | null;
+  activeSkillName: string | null;
   damagePopups: Array<{ id: number, value: number, x: number, y: number }>;
 
   startBattle: (party: BattleUnit[], enemies: BattleUnit[]) => void;
@@ -49,6 +50,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
   logs: [],
   attackingId: null,
   targetId: null,
+  activeSkillName: null,
   damagePopups: [],
 
   resetBattle: () => set({
@@ -60,6 +62,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     winner: null,
     attackingId: null,
     targetId: null,
+    activeSkillName: null,
     damagePopups: [],
     logs: []
   }),
@@ -161,7 +164,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     addLog(`${caster.name} used ${skill.name}!`);
 
     // Animation: Start (we just use the caster ID for animation)
-    set({ attackingId: caster.id });
+    set({ attackingId: caster.id, activeSkillName: skill.name });
 
     let nextPlayerParty = [...playerParty];
     let nextEnemies = [...enemies];
@@ -227,6 +230,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       turnOrder: determineTurnOrder([...nextPlayerParty, ...nextEnemies]),
       attackingId: null,
       targetId: null,
+      activeSkillName: null,
     });
 
     setTimeout(() => {
