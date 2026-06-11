@@ -13,6 +13,7 @@ interface BattleCanvasProps {
   partyIds: string[];
   enemyIds: string[];
   activeSkillName?: string | null;
+  isShaking?: boolean;
 }
 
 const PIXEL_SIZE = 4;
@@ -45,7 +46,8 @@ export default function BattleCanvas({
   activeUnitId,
   partyIds,
   enemyIds,
-  activeSkillName
+  activeSkillName,
+  isShaking
 }: BattleCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
@@ -64,6 +66,12 @@ export default function BattleCanvas({
       if (!ctx) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (isShaking) {
+        const sx = (Math.random() - 0.5) * 12;
+        const sy = (Math.random() - 0.5) * 12;
+        ctx.translate(sx, sy);
+      }
 
       // Background (Dark gradient + parallax stars/dust)
       const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -305,12 +313,16 @@ export default function BattleCanvas({
       ctx.globalAlpha = 1.0;
       ctx.textAlign = 'left';
 
+      if (isShaking) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
+
       animationFrameId = requestAnimationFrame(render);
     };
 
     render();
     return () => cancelAnimationFrame(animationFrameId);
-  }, [partySprites, enemySprites, attackingId, targetId, damagePopups, activeUnitId, activeSkillName]);
+  }, [partySprites, enemySprites, attackingId, targetId, damagePopups, activeUnitId, activeSkillName, isShaking]);
 
   return (
     <canvas

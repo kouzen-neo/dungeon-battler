@@ -38,10 +38,13 @@ function EndlessPageContent() {
     enemies, 
     currentUnit, 
     isBattleOver, 
+    isAutoBattle,
     attack,
     useSkill, 
+    useUltimate,
     useItem,
     startBattle,
+    toggleAutoBattle,
     activeSkillName
   } = useBattle();
 
@@ -50,6 +53,7 @@ function EndlessPageContent() {
   const attackingId = useBattleStore((state) => state.attackingId);
   const targetId = useBattleStore((state) => state.targetId);
   const damagePopups = useBattleStore((state) => state.damagePopups);
+  const isShaking = useBattleStore((state) => state.isShaking);
   
   const [isSwapping, setIsSwapping] = useState(false);
   const [isItemMenuOpen, setIsItemMenuOpen] = useState(false);
@@ -142,6 +146,17 @@ function EndlessPageContent() {
         <div className="flex items-center gap-2">
           <Sword className="text-red-500" size={20} />
           <h1 className="text-xl font-black tracking-tighter text-red-500 uppercase">ENDLESS</h1>
+          <button 
+            onClick={toggleAutoBattle}
+            className={`
+              ml-2 px-3 py-1 rounded-full text-[8px] font-black border transition-all active:scale-95
+              ${isAutoBattle 
+                ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)]' 
+                : 'bg-slate-900 border-slate-800 text-slate-500'}
+            `}
+          >
+            {isAutoBattle ? 'AUTO: ON' : 'AUTO: OFF'}
+          </button>
         </div>
         <div className="bg-slate-900 px-3 py-1 rounded-full border border-slate-800">
           <span className="text-[10px] font-bold text-slate-500 uppercase">Floor</span>
@@ -161,6 +176,7 @@ function EndlessPageContent() {
             partyIds={playerParty.map(u => u.id)}
             enemyIds={enemies.map(u => u.id)}
             activeSkillName={activeSkillName}
+            isShaking={isShaking}
           />
         </div>
         
@@ -201,11 +217,14 @@ function EndlessPageContent() {
         <ActionButtons 
           onAttack={handleAttack}
           onSkill={() => useSkill()}
+          onUltimate={() => useUltimate()}
           onItem={() => setIsItemMenuOpen(true)}
           onSwap={() => setIsSwapping(true)}
-          disabled={isBattleOver || !currentUnit || currentUnit.isEnemy || !!attackingId}
+          disabled={isBattleOver || isAutoBattle || !currentUnit || currentUnit.isEnemy || !!attackingId}
           skillName={currentUnit?.skill?.name}
           skillCooldown={currentUnit?.skillCooldown}
+          currentEnergy={currentUnit?.currentEnergy}
+          maxEnergy={currentUnit?.maxEnergy}
         />
       </div>
 

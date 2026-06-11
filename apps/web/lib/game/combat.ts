@@ -6,6 +6,8 @@ export interface CombatStats {
   def: number;
   spd: number;
   element: ElementType;
+  energy?: number;
+  maxEnergy?: number;
 }
 
 export const getElementMultiplier = (attacker: ElementType, defender: ElementType): number => {

@@ -12,6 +12,7 @@ export interface OwnedHero extends HeroTemplate {
 interface HeroState {
   ownedHeroes: OwnedHero[];
   partyIds: string[]; // instanceIds
+  pityCounter: number;
   
   pullGacha: () => Promise<OwnedHero | null>;
   setParty: (ids: string[]) => void;
@@ -25,6 +26,7 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     { ...heroTemplates.rogue, instanceId: 'init-3', level: 1, exp: 0 },
   ],
   partyIds: ['init-1', 'init-2', 'init-3'],
+  pityCounter: 0,
 
   levelUpHero: async (instanceId: string) => {
     const { ownedHeroes } = get();
@@ -65,18 +67,40 @@ export const useHeroStore = create<HeroState>((set, get) => ({
   },
 
   pullGacha: async () => {
+    const { pityCounter, ownedHeroes } = get();
     const story = useStoryStore.getState();
     const save = useSaveStore.getState();
-    const gachaCost = 100;
+    const gachaCost = 100; // 100 Gems per pull
 
-    if (story.gold < gachaCost) return null;
+    if (story.gems < gachaCost) return null;
 
-    // Deduct gold
-    useStoryStore.setState({ gold: story.gold - gachaCost });
+    // Deduct gems
+    useStoryStore.setState({ gems: story.gems - gachaCost });
 
-    // Random roll
-    const templates = Object.values(heroTemplates);
-    const rolled = templates[Math.floor(Math.random() * templates.length)];
+    const newPity = pityCounter + 1;
+    let rolledRarity: "R" | "SR" | "SSR" = "R";
+
+    // Weighted RNG: 70% R, 25% SR, 5% SSR
+    if (newPity >= 50) {
+      rolledRarity = "SSR";
+      set({ pityCounter: 0 });
+    } else {
+      const roll = Math.random() * 100;
+      if (roll < 5) {
+        rolledRarity = "SSR";
+        set({ pityCounter: 0 });
+      } else if (roll < 30) {
+        rolledRarity = "SR";
+        set({ pityCounter: newPity });
+      } else {
+        rolledRarity = "R";
+        set({ pityCounter: newPity });
+      }
+    }
+
+    // Filter templates by rarity
+    const possibleHeroes = Object.values(heroTemplates).filter(h => h.rarity === rolledRarity);
+    const rolled = possibleHeroes[Math.floor(Math.random() * possibleHeroes.length)];
     
     const newHero: OwnedHero = {
       ...rolled,

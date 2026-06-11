@@ -3,20 +3,21 @@
 import React, { useState } from 'react';
 import { useHeroStore, OwnedHero } from '@/lib/stores/heroStore';
 import { useStoryStore } from '@/lib/game/storyProgress';
-import { Coins, Sparkles, ChevronLeft, Ticket } from 'lucide-react';
+import { Coins, Sparkles, ChevronLeft, Ticket, Gem } from 'lucide-react';
 import Link from 'next/link';
 import PixelSprite from '@/components/ui/PixelSprite';
 
 export default function GachaPage() {
   const pullGacha = useHeroStore((state) => state.pullGacha);
-  const gold = useStoryStore((state) => state.gold);
+  const pityCounter = useHeroStore((state) => state.pityCounter);
+  const gems = useStoryStore((state) => state.gems);
   
   const [isPulling, setIsPulling] = useState(false);
   const [result, setResult] = useState<OwnedHero | null>(null);
 
   const handlePull = async () => {
-    if (gold < 100) {
-      alert("Not enough gold! Go battle to earn more.");
+    if (gems < 100) {
+      alert("Not enough gems! Complete floors or events to earn more.");
       return;
     }
 
@@ -45,8 +46,8 @@ export default function GachaPage() {
           SUMMON
         </h1>
         <div className="flex items-center gap-1 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">
-          <Coins size={14} className="text-yellow-500" />
-          <span className="text-sm font-bold text-yellow-500">{gold}</span>
+          <Gem size={14} className="text-cyan-400" />
+          <span className="text-sm font-bold text-cyan-400">{gems}</span>
         </div>
       </header>
 
@@ -58,11 +59,18 @@ export default function GachaPage() {
                 <Ticket size={80} className="text-red-600 animate-bounce" />
               </div>
               <div className="absolute inset-0 bg-red-600/20 blur-3xl rounded-full scale-150 animate-pulse" />
+              
+              {/* Pity Indicator */}
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-800 px-4 py-1.5 rounded-full z-20 shadow-xl whitespace-nowrap flex items-center gap-2">
+                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">SSR Pity</span>
+                 <div className="w-[1px] h-3 bg-slate-800" />
+                 <span className="text-sm font-black text-red-500 tabular-nums">{pityCounter}<span className="text-slate-600 ml-0.5">/50</span></span>
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 pt-4">
               <h2 className="text-3xl font-black italic tracking-tighter">HERO SUMMON</h2>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Random Hero • 100 Gold / Pull</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Random Hero • 100 Gems / Pull</p>
             </div>
 
             <button

@@ -42,10 +42,13 @@ function GamePageContent() {
     enemies, 
     currentUnit, 
     isBattleOver, 
+    isAutoBattle,
     attack,
     useSkill, 
+    useUltimate,
     useItem,
     startBattle,
+    toggleAutoBattle,
     activeSkillName
   } = useBattle();
 
@@ -54,6 +57,7 @@ function GamePageContent() {
   const attackingId = useBattleStore((state) => state.attackingId);
   const targetId = useBattleStore((state) => state.targetId);
   const damagePopups = useBattleStore((state) => state.damagePopups);
+  const isShaking = useBattleStore((state) => state.isShaking);
   const [isSwapping, setIsSwapping] = useState(false);
   const [isItemMenuOpen, setIsItemMenuOpen] = useState(false);
   const completeFloor = useStoryStore((state) => state.completeFloor);
@@ -143,8 +147,19 @@ function GamePageContent() {
   return (
     <main className="flex flex-col h-[100dvh] bg-slate-950 text-white overflow-hidden max-w-md mx-auto relative">
       {/* Header */}
-      <header className="flex-shrink-0 pt-4 pb-2 px-4 text-center">
+      <header className="flex-shrink-0 pt-4 pb-2 px-4 flex justify-between items-center">
         <h1 className="text-xl font-black tracking-tighter text-red-500 uppercase">Dungeon Battler</h1>
+        <button 
+          onClick={toggleAutoBattle}
+          className={`
+            px-4 py-1.5 rounded-full text-[10px] font-black border transition-all active:scale-95
+            ${isAutoBattle 
+              ? 'bg-red-600 border-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)]' 
+              : 'bg-slate-900 border-slate-800 text-slate-500'}
+          `}
+        >
+          {isAutoBattle ? 'AUTO: ON' : 'AUTO: OFF'}
+        </button>
       </header>
 
       {/* Main Game Area - Scrollable */}
@@ -162,6 +177,7 @@ function GamePageContent() {
             partyIds={playerParty.map(u => u.id)}
             enemyIds={enemies.map(u => u.id)}
             activeSkillName={activeSkillName}
+            isShaking={isShaking}
           />
         </div>
         
@@ -206,11 +222,14 @@ function GamePageContent() {
         <ActionButtons 
           onAttack={handleAttack}
           onSkill={() => useSkill()}
+          onUltimate={() => useUltimate()}
           onItem={() => setIsItemMenuOpen(true)}
           onSwap={() => setIsSwapping(true)}
-          disabled={isBattleOver || !currentUnit || currentUnit.isEnemy || !!attackingId}
+          disabled={isBattleOver || isAutoBattle || !currentUnit || currentUnit.isEnemy || !!attackingId}
           skillName={currentUnit?.skill?.name}
           skillCooldown={currentUnit?.skillCooldown}
+          currentEnergy={currentUnit?.currentEnergy}
+          maxEnergy={currentUnit?.maxEnergy}
         />
       </div>
 

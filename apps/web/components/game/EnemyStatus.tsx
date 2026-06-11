@@ -7,6 +7,8 @@ interface BattleUnit {
   id: string;
   name: string;
   currentHp: number;
+  currentEnergy: number;
+  maxEnergy: number;
   stats: { hp: number };
 }
 
@@ -25,6 +27,8 @@ export default function EnemyStatus({ enemies, activeUnitId }: EnemyStatusProps)
           name={unit.name} 
           currentHp={unit.currentHp} 
           maxHp={unit.stats.hp} 
+          currentEnergy={unit.currentEnergy}
+          maxEnergy={unit.maxEnergy}
           isEnemy 
           isActive={unit.id === activeUnitId}
         />

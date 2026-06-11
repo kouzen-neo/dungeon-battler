@@ -90,6 +90,9 @@ export default function ProfilePage() {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Collection ({ownedHeroes.length})</h3>
           <div className="flex gap-2">
+            <Link href="/leaderboard" className="text-[10px] font-black text-blue-500 flex items-center gap-1 bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 active:scale-95">
+              <Trophy size={10} /> RANKINGS
+            </Link>
             <Link href="/archive" className="text-[10px] font-black text-amber-500 flex items-center gap-1 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 active:scale-95">
               <Book size={10} /> ARCHIVE
             </Link>

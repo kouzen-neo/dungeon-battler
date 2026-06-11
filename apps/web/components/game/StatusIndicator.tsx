@@ -6,13 +6,20 @@ interface UnitStatusProps {
   name: string;
   currentHp: number;
   maxHp: number;
+  currentEnergy?: number;
+  maxEnergy?: number;
   isEnemy?: boolean;
   isActive?: boolean;
 }
 
-export default function StatusIndicator({ name, currentHp, maxHp, isEnemy, isActive }: UnitStatusProps) {
+export default function StatusIndicator({ 
+  name, currentHp, maxHp, currentEnergy, maxEnergy, isEnemy, isActive 
+}: UnitStatusProps) {
   const hpPercent = (currentHp / maxHp) * 100;
   const hpColor = hpPercent > 50 ? 'bg-green-500' : hpPercent > 20 ? 'bg-yellow-500' : 'bg-red-500';
+
+  const showEnergy = currentEnergy !== undefined && maxEnergy !== undefined;
+  const energyPercent = showEnergy ? (currentEnergy! / maxEnergy!) * 100 : 0;
 
   return (
     <div className={`
@@ -32,12 +39,22 @@ export default function StatusIndicator({ name, currentHp, maxHp, isEnemy, isAct
         </div>
         <span className="text-[10px] font-mono shrink-0">{currentHp}/{maxHp}</span>
       </div>
+      
       <div className="w-full h-1.5 bg-slate-800 rounded-full border border-slate-700/50 overflow-hidden">
         <div 
           className={`h-full ${hpColor} transition-all duration-300`} 
           style={{ width: `${hpPercent}%` }}
         />
       </div>
+
+      {showEnergy && (
+        <div className="w-full h-1 bg-slate-900 rounded-full border border-slate-800/50 overflow-hidden mt-0.5">
+          <div 
+            className={`h-full bg-cyan-400 transition-all duration-300`} 
+            style={{ width: `${energyPercent}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }

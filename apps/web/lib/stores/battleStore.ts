@@ -10,10 +10,13 @@ export interface BattleUnit {
   name: string;
   stats: CombatStats;
   currentHp: number;
+  currentEnergy: number;
+  maxEnergy: number;
   isEnemy: boolean;
   position: UnitPosition;
   skillCooldown: number;
   skill?: HeroSkill;
+  ultimateSkill?: HeroSkill;
 }
 
 interface BattleState {
@@ -24,19 +27,24 @@ interface BattleState {
   isBattleOver: boolean;
   winner: "player" | "enemy" | null;
   logs: string[];
+  isAutoBattle: boolean;
   
   // Animation State
   attackingId: string | null;
   targetId: string | null;
   activeSkillName: string | null;
   damagePopups: Array<{ id: number, value: number, x: number, y: number }>;
+  isShaking: boolean;
 
   startBattle: (party: BattleUnit[], enemies: BattleUnit[]) => void;
   nextTurn: () => void;
   attack: (targetId: string) => Promise<void>;
   useSkill: () => Promise<void>;
+  useUltimate: () => Promise<void>;
   useItem: (itemId: string, config: { name: string, healHp?: number, damage?: number }) => Promise<void>;
   swapPositions: (id1: string, id2: string) => void;
+  toggleAutoBattle: () => void;
+  triggerShake: (duration?: number) => void;
   addLog: (log: string) => void;
   resetBattle: () => void;
 }
@@ -49,10 +57,12 @@ export const useBattleStore = create<BattleState>((set, get) => ({
   isBattleOver: false,
   winner: null,
   logs: [],
+  isAutoBattle: false,
   attackingId: null,
   targetId: null,
   activeSkillName: null,
   damagePopups: [],
+  isShaking: false,
 
   resetBattle: () => set({
     playerParty: [],
@@ -61,18 +71,31 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     currentTurnIndex: 0,
     isBattleOver: false,
     winner: null,
+    isAutoBattle: false,
     attackingId: null,
     targetId: null,
     activeSkillName: null,
     damagePopups: [],
+    isShaking: false,
     logs: []
   }),
 
+  triggerShake: (duration = 500) => {
+    set({ isShaking: true });
+    setTimeout(() => set({ isShaking: false }), duration);
+  },
+
+  toggleAutoBattle: () => set(state => ({ isAutoBattle: !state.isAutoBattle })),
+
   startBattle: (party, enemies) => {
-    const turnOrder = determineTurnOrder([...party, ...enemies]);
+    // Ensure all units have energy initialized
+    const initializedParty = party.map(u => ({ ...u, currentEnergy: u.currentEnergy || 0, maxEnergy: u.maxEnergy || 100 }));
+    const initializedEnemies = enemies.map(u => ({ ...u, currentEnergy: u.currentEnergy || 0, maxEnergy: u.maxEnergy || 100 }));
+    
+    const turnOrder = determineTurnOrder([...initializedParty, ...initializedEnemies]);
     set({
-      playerParty: party,
-      enemies: enemies,
+      playerParty: initializedParty,
+      enemies: initializedEnemies,
       turnOrder: turnOrder,
       currentTurnIndex: 0,
       isBattleOver: false,
@@ -101,6 +124,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
 
     // Animation: Start
     set({ attackingId: attacker.id, targetId: target.id });
+    if (!attacker.isEnemy) get().triggerShake(300);
 
     const damage = calculateDamage(attacker.stats, target.stats);
     const newHp = Math.max(0, target.currentHp - damage);
@@ -123,11 +147,24 @@ export const useBattleStore = create<BattleState>((set, get) => ({
 
     addLog(`${attacker.name} attacked ${target.name} for ${damage} damage!`);
 
-    const updateUnit = (units: BattleUnit[]) => 
-      units.map(u => u.id === targetId ? { ...u, currentHp: newHp } : u);
+    const updateUnit = (units: BattleUnit[], id: string, hp: number, energyAdd: number = 0) => 
+      units.map(u => u.id === id ? { 
+        ...u, 
+        currentHp: hp, 
+        currentEnergy: Math.min(u.maxEnergy, u.currentEnergy + energyAdd) 
+      } : u);
 
-    const nextPlayerParty = updateUnit(playerParty);
-    const nextEnemies = updateUnit(enemies);
+    // Attacker gains 20 energy, target gains 10 energy from being hit
+    let nextPlayerParty = [...playerParty];
+    let nextEnemies = [...enemies];
+
+    if (attacker.isEnemy) {
+      nextEnemies = updateUnit(nextEnemies, attacker.id, attacker.currentHp, 20);
+      nextPlayerParty = updateUnit(nextPlayerParty, target.id, newHp, 10);
+    } else {
+      nextPlayerParty = updateUnit(nextPlayerParty, attacker.id, attacker.currentHp, 20);
+      nextEnemies = updateUnit(nextEnemies, target.id, newHp, 10);
+    }
     
     if (newHp === 0) {
       addLog(`${target.name} has been defeated!`);
@@ -181,8 +218,12 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     let nextEnemies = [...enemies];
     let popups: Array<{ id: number, value: number, x: number, y: number }> = [];
 
-    // Apply Cooldown
-    nextPlayerParty = nextPlayerParty.map(u => u.id === caster.id ? { ...u, skillCooldown: skill.cooldown } : u);
+    // Apply Cooldown and gain energy
+    nextPlayerParty = nextPlayerParty.map(u => u.id === caster.id ? { 
+      ...u, 
+      skillCooldown: skill.cooldown,
+      currentEnergy: Math.min(u.maxEnergy, u.currentEnergy + 20)
+    } : u);
 
     await new Promise(r => setTimeout(r, 600)); // Animation delay
 
@@ -205,16 +246,14 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       let targets = [...nextEnemies].filter(e => e.currentHp > 0);
       
       if (skill.targetType === 'SINGLE_ENEMY') {
-        // Find highest HP enemy or random, let's just pick first alive
         targets = [targets[0]];
       } else if (skill.targetType === 'FRONT_MID_ENEMIES') {
         targets = targets.filter(e => e.position === 'FRONT' || e.position === 'MID');
         if (targets.length === 0) targets = [nextEnemies.filter(e => e.currentHp > 0)[0]]; // fallback
-      } // ALL_ENEMIES keeps all alive targets
+      }
 
       targets.forEach((target, j) => {
         const i = nextEnemies.findIndex(e => e.id === target.id);
-        // We override the attacker's ATK with multiplier before calculating damage
         const tempStats = { ...caster.stats, atk: caster.stats.atk * (skill.damageMultiplier || 1) };
         const damage = calculateDamage(tempStats, target.stats);
         const newHp = Math.max(0, target.currentHp - damage);
@@ -263,6 +302,100 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     }
   },
 
+  useUltimate: async () => {
+    const { turnOrder, currentTurnIndex, playerParty, enemies, addLog } = get();
+    const caster = turnOrder[currentTurnIndex];
+    const { playSFX } = useAudioStore.getState();
+    
+    if (!caster || caster.currentHp <= 0 || caster.isEnemy || !caster.ultimateSkill || caster.currentEnergy < caster.maxEnergy) return;
+
+    const skill = caster.ultimateSkill;
+    addLog(`${caster.name} unleashed ULTIMATE: ${skill.name}!`);
+
+    set({ attackingId: caster.id, activeSkillName: `ULTIMATE: ${skill.name}` });
+    get().triggerShake(1000);
+
+    let nextPlayerParty = [...playerParty];
+    let nextEnemies = [...enemies];
+    let popups: Array<{ id: number, value: number, x: number, y: number }> = [];
+
+    // Reset Energy
+    nextPlayerParty = nextPlayerParty.map(u => u.id === caster.id ? { ...u, currentEnergy: 0 } : u);
+
+    await new Promise(r => setTimeout(r, 800));
+
+    if (skill.targetType === 'ALL_ALLIES' && skill.healPercentage) {
+      nextPlayerParty = nextPlayerParty.map((u, i) => {
+        if (u.currentHp > 0) {
+          const healAmount = Math.floor(u.stats.hp * skill.healPercentage!);
+          const healedHp = Math.min(u.stats.hp, u.currentHp + healAmount);
+          const px = 60 + (i === 1 ? 20 : 0);
+          const py = 300 - 120 - (i * 50);
+          popups.push({ id: Date.now() + i, value: -healAmount, x: px, y: py }); 
+          return { ...u, currentHp: healedHp };
+        }
+        return u;
+      });
+      addLog(`Party recovered HP!`);
+      playSFX('/audio/sfx-win.wav');
+    } else {
+      let targets = [...nextEnemies].filter(e => e.currentHp > 0);
+      
+      if (skill.targetType === 'SINGLE_ENEMY') {
+        targets = [targets[0]];
+      }
+
+      targets.forEach((target, j) => {
+        const i = nextEnemies.findIndex(e => e.id === target.id);
+        const tempStats = { ...caster.stats, atk: caster.stats.atk * (skill.damageMultiplier || 1) };
+        const damage = calculateDamage(tempStats, target.stats);
+        const newHp = Math.max(0, target.currentHp - damage);
+        
+        const px = 400 - 120 - (i === 1 ? 20 : 0);
+        const py = 60 + (i * 60);
+        popups.push({ id: Date.now() + j, value: damage, x: px, y: py });
+        
+        nextEnemies = nextEnemies.map(e => e.id === target.id ? { ...e, currentHp: newHp } : e);
+        if (newHp === 0) {
+          addLog(`${target.name} has been defeated!`);
+        }
+      });
+      playSFX('/audio/sfx-hit.wav');
+    }
+
+    set(state => ({ damagePopups: [...state.damagePopups, ...popups] }));
+
+    const allEnemiesDead = nextEnemies.every(e => e.currentHp <= 0);
+    const allPlayerDead = nextPlayerParty.every(p => p.currentHp <= 0);
+
+    set({
+      playerParty: nextPlayerParty,
+      enemies: nextEnemies,
+      turnOrder: determineTurnOrder([...nextPlayerParty, ...nextEnemies]),
+      attackingId: null,
+      targetId: null,
+      activeSkillName: null,
+    });
+
+    setTimeout(() => {
+      set(state => ({ damagePopups: state.damagePopups.filter(p => !popups.find(po => po.id === p.id)) }));
+    }, 1000);
+
+    if (allEnemiesDead) {
+      set({ isBattleOver: true, winner: "player" });
+      addLog("Victory!");
+      playSFX('/audio/sfx-win.wav');
+    } else if (allPlayerDead) {
+      set({ isBattleOver: true, winner: "enemy" });
+      addLog("Defeat...");
+      playSFX('/audio/sfx-lose.wav');
+    }
+
+    if (!allEnemiesDead && !allPlayerDead) {
+      get().nextTurn();
+    }
+  },
+
   useItem: async (itemId, config) => {
     const { turnOrder, currentTurnIndex, playerParty, enemies, addLog } = get();
     const caster = turnOrder[currentTurnIndex];
@@ -275,10 +408,9 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     let nextEnemies = [...enemies];
     let popups: Array<{ id: number, value: number, x: number, y: number }> = [];
 
-    await new Promise(r => setTimeout(r, 400)); // Short delay for item use
+    await new Promise(r => setTimeout(r, 400));
 
     if (config.healHp) {
-      // Heal active character
       const targetIndex = playerParty.findIndex(p => p.id === caster.id);
       const healedHp = Math.min(caster.stats.hp, caster.currentHp + config.healHp);
       const px = 60 + (targetIndex === 1 ? 20 : 0);
@@ -288,7 +420,6 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     }
 
     if (config.damage) {
-      // Damage first alive enemy
       const target = nextEnemies.find(e => e.currentHp > 0);
       if (target) {
         const targetIndex = nextEnemies.findIndex(e => e.id === target.id);
@@ -359,15 +490,12 @@ export const useBattleStore = create<BattleState>((set, get) => ({
   nextTurn: () => {
     set((state) => {
       let nextIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
-      // Skip dead units
       while (state.turnOrder[nextIndex].currentHp <= 0) {
         nextIndex = (nextIndex + 1) % state.turnOrder.length;
       }
       
       const nextUnit = state.turnOrder[nextIndex];
       
-      // Decrement cooldowns at the start of a new turn round?
-      // Actually simpler: just decrement the active unit's cooldown
       let updatedParty = [...state.playerParty];
       if (!nextUnit.isEnemy && nextUnit.skillCooldown > 0) {
          updatedParty = updatedParty.map(u => 
@@ -378,7 +506,6 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       return { 
         currentTurnIndex: nextIndex,
         playerParty: updatedParty,
-        // Also update the turnOrder reference so currentUnit gets the updated cooldown
         turnOrder: state.turnOrder.map(u => 
           u.id === nextUnit.id && u.skillCooldown > 0 ? { ...u, skillCooldown: u.skillCooldown - 1 } : u
         )
