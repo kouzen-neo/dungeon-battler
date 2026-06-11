@@ -9,6 +9,7 @@ interface BattleCanvasProps {
   attackingId: string | null;
   targetId: string | null;
   damagePopups: Array<{ id: number, value: number, x: number, y: number }>;
+  activeUnitId?: string | null;
 }
 
 const PIXEL_SIZE = 4;
@@ -37,7 +38,8 @@ export default function BattleCanvas({
   enemySprites, 
   attackingId, 
   targetId, 
-  damagePopups 
+  damagePopups,
+  activeUnitId
 }: BattleCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
@@ -83,7 +85,15 @@ export default function BattleCanvas({
       }
 
       // Helper to draw shadow
-      const drawShadow = (x: number, y: number) => {
+      const drawShadow = (x: number, y: number, isActive: boolean = false) => {
+        if (isActive) {
+          // Draw glowing active highlight
+          ctx.fillStyle = `rgba(251, 191, 36, ${0.4 + Math.sin(frame * 0.1) * 0.2})`; // amber-400 pulsing
+          ctx.beginPath();
+          ctx.ellipse(x + (SPRITE_SIZE*PIXEL_SIZE)/2, y + (SPRITE_SIZE*PIXEL_SIZE) - 5, 30, 12, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
         ctx.beginPath();
         ctx.ellipse(x + (SPRITE_SIZE*PIXEL_SIZE)/2, y + (SPRITE_SIZE*PIXEL_SIZE) - 5, 25, 8, 0, 0, Math.PI * 2);
@@ -116,7 +126,7 @@ export default function BattleCanvas({
           ctx.filter = 'brightness(200%) sepia(100%) hue-rotate(-50deg) saturate(500%)';
         }
 
-        drawShadow(x, y);
+        drawShadow(x, y, id === activeUnitId);
         drawSprite(ctx, sprite, x, y);
         ctx.filter = 'none'; // Reset filter
       });
@@ -141,7 +151,7 @@ export default function BattleCanvas({
           ctx.filter = 'brightness(200%) sepia(100%) hue-rotate(-50deg) saturate(500%)';
         }
 
-        drawShadow(x, y);
+        drawShadow(x, y, id === activeUnitId);
         drawSprite(ctx, ctx.filter !== 'none' ? sprite : sprite, x, y, PIXEL_SIZE, true); // Keep original sprite reference but filter handles the color
         ctx.filter = 'none';
       });
@@ -222,7 +232,7 @@ export default function BattleCanvas({
 
     render();
     return () => cancelAnimationFrame(animationFrameId);
-  }, [partySprites, enemySprites, attackingId, targetId, damagePopups]);
+  }, [partySprites, enemySprites, attackingId, targetId, damagePopups, activeUnitId]);
 
   return (
     <canvas

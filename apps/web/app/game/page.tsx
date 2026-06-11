@@ -145,6 +145,7 @@ function GamePageContent() {
             attackingId={attackingId}
             targetId={targetId}
             damagePopups={damagePopups}
+            activeUnitId={currentUnit?.id}
           />
         </div>
         
