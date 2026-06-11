@@ -146,6 +146,8 @@ function GamePageContent() {
             targetId={targetId}
             damagePopups={damagePopups}
             activeUnitId={currentUnit?.id}
+            partyIds={playerParty.map(u => u.id)}
+            enemyIds={enemies.map(u => u.id)}
           />
         </div>
         

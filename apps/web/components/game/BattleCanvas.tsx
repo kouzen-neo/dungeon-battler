@@ -10,6 +10,8 @@ interface BattleCanvasProps {
   targetId: string | null;
   damagePopups: Array<{ id: number, value: number, x: number, y: number }>;
   activeUnitId?: string | null;
+  partyIds: string[];
+  enemyIds: string[];
 }
 
 const PIXEL_SIZE = 4;
@@ -39,7 +41,9 @@ export default function BattleCanvas({
   attackingId, 
   targetId, 
   damagePopups,
-  activeUnitId
+  activeUnitId,
+  partyIds,
+  enemyIds
 }: BattleCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef(0);
@@ -103,7 +107,7 @@ export default function BattleCanvas({
       // Party Positions (Draw from back to front so they overlap correctly)
       [...partySprites].reverse().forEach((sprite, reversedI) => {
         const i = partySprites.length - 1 - reversedI;
-        const id = `p${i+1}`;
+        const id = partyIds[i]; // Use real ID instead of hardcoded 'p1'
         let x = 60 + (i === 1 ? 20 : 0); // Stagger formation slightly
         let y = canvas.height - 120 - (i * 50);
         
@@ -133,7 +137,7 @@ export default function BattleCanvas({
 
       // Enemy Positions
       enemySprites.forEach((sprite, i) => {
-        const id = `e${i+1}`;
+        const id = enemyIds[i]; // Use real ID instead of hardcoded 'e1'
         let x = canvas.width - 120 - (i === 1 ? 20 : 0);
         let y = 60 + (i * 60);
 
