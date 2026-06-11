@@ -20,7 +20,9 @@ Mengatur segala state temporal dan siklus yang terjadi saat dalam pertarungan.
 
 **Actions Utama:**
 - `startBattle(party, enemies)` - Inisialisasi battle.
-- `attack(targetId)` - Menjalankan logika serangan, kalkulasi damage, trigger animasi, dan penentuan kondisi selesai/mati. Asynchronous (menunggu animasi selesai).
+- `attack(targetId)` - Menjalankan logika serangan otomatis, kalkulasi damage, trigger animasi, dan penentuan kondisi mati.
+- `useSkill()` - Menjalankan logika skill unik hero (tergantung Role), mengatur cooldown, dan memicu target efek/animasi (menggunakan `activeSkillName`).
+- `useItem(itemId, config)` - Menggunakan item pada turn aktif untuk healing atau damage absolut.
 - `swapPositions(id1, id2)` - Menukar posisi dua unit dalam party dan mengonsumsi 1 giliran.
 - `nextTurn()` - Pindah giliran ke unit selanjutnya yang masih hidup.
 
@@ -71,6 +73,7 @@ Mengatur sistem inventaris item (selain hero).
 
 **Actions Utama:**
 - `buyItem(item)` - Cek kecukupan `gold` di `storyStore`, jika cukup potong `gold` dan increment `inventory[item.id]`. Panggil `persistAll()`.
+- `consumeItem(itemId)` - Mengecek jika item > 0 di inventory, menguranginya 1, dan memanggil `persistAll()`. Mengembalikan boolean keberhasilan.
 
 ---
 

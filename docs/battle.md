@@ -260,7 +260,8 @@ interface BattleCanvasProps {
   partySprites:  number[][][][]; // Array of resolved RGBA sprite grids
   enemySprites:  number[][][][]; // Array of resolved RGBA sprite grids
   attackingId:   string | null;  // ID unit yang sedang menyerang
-  targetId:      string | null;  // ID unit yang sedang diserang
+  targetId:      string | null;  // Comma-separated IDs unit yang diserang
+  activeSkillName?: string | null; // Nama skill yang aktif untuk memicu efek animasi khusus
   damagePopups:  Array<{ id: number, value: number, x: number, y: number }>;
 }
 ```
@@ -269,8 +270,9 @@ interface BattleCanvasProps {
 |---|---|---|
 | Idle float | Selalu | `y += sin(frame × 0.1 + i) × 3` |
 | Serangan | `attackingId === id` | `x += 40` (maju ke depan) |
-| Terkena | `targetId === id` | `x += sin(frame × 0.5) × 5` (shake) |
-| Damage popup | Ada entry di `damagePopups` | Teks melayang ke atas, hilang setelah 1000ms |
+| Terkena | `targetId?.includes(id)` | `x += sin(frame × 0.8) × 8` (shake + red flash) |
+| Damage popup | Ada entry di `damagePopups` | Angka damage melompat naik lalu memudar |
+| Epic Skill Effect | `activeSkillName` memiliki nilai | Efek canvas full-screen (Ledakan, Tebasan, Cahaya Suci) akan di-render dan di-center pada target. |
 
 ### `drawSprite` (fungsi lokal)
 ```ts
@@ -287,3 +289,41 @@ export const drawSprite = (
 ```
 
 Musuh di-render dengan `flip: true` sehingga menghadap ke kiri (ke arah party).
+
+---
+
+## 9. Sistem Skill & Cooldown
+
+### Penggunaan Skill (`useSkill`)
+Setiap Hero memiliki `skill` eksklusif berdasarkan Role-nya (Warrior, Mage, Paladin, dll).
+```ts
+// Path: apps/web/lib/stores/battleStore.ts
+```
+
+**Flow:**
+1. Cek `skillCooldown`: Jika `> 0`, tombol dinonaktifkan.
+2. Saat digunakan, set `activeSkillName` dan `targetId` (bisa multiple via comma-separated, misal AOE "e1,e2").
+3. Berikan animasi delay `600ms`.
+4. Jika `ALL_ALLIES`, pulihkan HP party (`healPercentage`).
+5. Jika tipe damage, hitung dan kurangi HP musuh dengan mempertimbangkan `damageMultiplier` skill.
+6. Set `skillCooldown` hero ke nilai cooldown bawaan skill. (Setiap `nextTurn`, nilai ini dikurangi 1).
+
+---
+
+## 10. Sistem Penggunaan Item
+
+### Penggunaan Item (`useItem`)
+Item dibeli melalui **Shop** dan disimpan dalam state global `useShopStore` (Inventory). Item dapat digunakan selama pertarungan melalui overlay modal UI.
+```ts
+// Path: apps/web/lib/stores/battleStore.ts
+useItem: (itemId: string, config: { name: string, healHp?: number, damage?: number }) => Promise<void>;
+```
+
+**Flow:**
+1. Player membuka menu Item (mengambil jumlah stok real-time dari `useShopStore`).
+2. Player memilih item. UI akan langsung memanggil `consumeItem` di Shop untuk mengurangi stok.
+3. Memanggil `useItem` di BattleStore.
+4. Menambahkan animasi delay singkat.
+5. Jika item memiliki `healHp`, menyembuhkan caster yang giliran aktif.
+6. Jika item memiliki `damage`, memberikan damage absolut langsung ke musuh terdepan.
+7. Mengecek kondisi win/lose lalu otomatis `nextTurn()`.
