@@ -13,6 +13,7 @@ export interface ShopItem {
 interface ShopState {
   inventory: Record<string, number>;
   buyItem: (item: ShopItem) => Promise<boolean>;
+  consumeItem: (itemId: string) => Promise<boolean>;
 }
 
 export const useShopStore = create<ShopState>((set, get) => ({
@@ -40,4 +41,20 @@ export const useShopStore = create<ShopState>((set, get) => ({
     }
     return false;
   },
+
+  consumeItem: async (itemId: string) => {
+    const { inventory } = get();
+    const save = useSaveStore.getState();
+    if (inventory[itemId] && inventory[itemId] > 0) {
+      set((state) => ({
+        inventory: {
+          ...state.inventory,
+          [itemId]: state.inventory[itemId] - 1
+        }
+      }));
+      await save.persistAll();
+      return true;
+    }
+    return false;
+  }
 }));

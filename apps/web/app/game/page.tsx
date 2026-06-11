@@ -16,10 +16,18 @@ import { useBattleStore } from '@/lib/stores/battleStore';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStoryStore } from '@/lib/game/storyProgress';
 import { useSaveStore } from '@/lib/stores/saveStore';
+import { useShopStore } from '@/lib/stores/shopStore';
 import { storyChapter1 } from '@/lib/game/storyData';
 import { Trophy, Home, Coins, Flag } from 'lucide-react';
 import Link from 'next/link';
 import { useHeroStore } from '@/lib/stores/heroStore';
+
+// Simple item definitions for use in battle
+const BATTLE_ITEMS = {
+  'pot_small': { name: 'Small Potion', healHp: 20 },
+  'bomb': { name: 'Bomb', damage: 30 },
+  'ether': { name: 'Elixir', healHp: 50 }, // Converted from ether since we have no mana
+};
 
 function GamePageContent() {
   const searchParams = useSearchParams();
@@ -36,6 +44,7 @@ function GamePageContent() {
     isBattleOver, 
     attack,
     useSkill, 
+    useItem,
     startBattle 
   } = useBattle();
 
@@ -45,10 +54,13 @@ function GamePageContent() {
   const targetId = useBattleStore((state) => state.targetId);
   const damagePopups = useBattleStore((state) => state.damagePopups);
   const [isSwapping, setIsSwapping] = useState(false);
+  const [isItemMenuOpen, setIsItemMenuOpen] = useState(false);
   const completeFloor = useStoryStore((state) => state.completeFloor);
   const persistAll = useSaveStore((state) => state.persistAll);
   const resetBattle = useBattleStore((state) => state.resetBattle);
   const swapPositions = useBattleStore((state) => state.swapPositions);
+  
+  const { inventory, consumeItem } = useShopStore();
 
   useEffect(() => {
     const activeParty = partyIds
@@ -192,9 +204,9 @@ function GamePageContent() {
         <ActionButtons 
           onAttack={handleAttack}
           onSkill={() => useSkill()}
-          onItem={() => console.log('Item')}
+          onItem={() => setIsItemMenuOpen(true)}
           onSwap={() => setIsSwapping(true)}
-          disabled={isBattleOver || currentUnit?.isEnemy || !!attackingId}
+          disabled={isBattleOver || !currentUnit || currentUnit.isEnemy || !!attackingId}
           skillName={currentUnit?.skill?.name}
           skillCooldown={currentUnit?.skillCooldown}
         />
@@ -272,6 +284,52 @@ function GamePageContent() {
 
             <button 
               onClick={() => setIsSwapping(false)}
+              className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl active:scale-95 transition-all text-xs uppercase"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isItemMenuOpen && (
+        <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center p-6 z-[90] animate-in fade-in duration-300">
+          <div className="bg-slate-900 border-2 border-slate-800 p-6 rounded-3xl w-full max-w-xs text-center shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+            <h2 className="text-xl font-black text-white mb-2 tracking-tighter">GUNAKAN ITEM</h2>
+            <p className="text-xs text-slate-400 mb-6 font-bold uppercase tracking-wider">Inventory Party:</p>
+            
+            <div className="space-y-3 mb-6 max-h-48 overflow-y-auto">
+              {Object.entries(inventory).map(([itemId, count]) => {
+                if (count <= 0) return null;
+                const itemConfig = BATTLE_ITEMS[itemId as keyof typeof BATTLE_ITEMS];
+                if (!itemConfig) return null;
+
+                return (
+                  <button
+                    key={itemId}
+                    onClick={async () => {
+                      if (currentUnit) {
+                        setIsItemMenuOpen(false);
+                        const consumed = await consumeItem(itemId);
+                        if (consumed) {
+                          await useItem(itemId, itemConfig);
+                        }
+                      }
+                    }}
+                    className="w-full py-3 bg-slate-950 hover:bg-slate-800 text-white font-bold rounded-2xl border border-slate-800 active:scale-95 transition-all flex justify-between px-4 items-center"
+                  >
+                    <span>{itemConfig.name}</span>
+                    <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 text-amber-500 font-bold">x{count}</span>
+                  </button>
+                );
+              })}
+              {Object.values(inventory).every(count => count <= 0) && (
+                <p className="text-sm text-red-500 font-bold">Inventory kamu kosong!</p>
+              )}
+            </div>
+
+            <button 
+              onClick={() => setIsItemMenuOpen(false)}
               className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl active:scale-95 transition-all text-xs uppercase"
             >
               Batal

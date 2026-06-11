@@ -10,6 +10,7 @@ export const useBattle = () => {
     isBattleOver, 
     attack, 
     useSkill,
+    useItem,
     startBattle 
   } = useBattleStore();
 
@@ -58,6 +59,7 @@ export const useBattle = () => {
     isBattleOver,
     attack,
     useSkill,
+    useItem,
     startBattle
   };
 };

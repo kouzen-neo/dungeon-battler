@@ -33,6 +33,7 @@ interface BattleState {
   nextTurn: () => void;
   attack: (targetId: string) => Promise<void>;
   useSkill: () => Promise<void>;
+  useItem: (itemId: string, config: { name: string, healHp?: number, damage?: number }) => Promise<void>;
   swapPositions: (id1: string, id2: string) => void;
   addLog: (log: string) => void;
   resetBattle: () => void;
@@ -226,6 +227,71 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       turnOrder: determineTurnOrder([...nextPlayerParty, ...nextEnemies]),
       attackingId: null,
       targetId: null,
+    });
+
+    setTimeout(() => {
+      set(state => ({ damagePopups: state.damagePopups.filter(p => !popups.find(po => po.id === p.id)) }));
+    }, 1000);
+
+    if (allEnemiesDead) {
+      set({ isBattleOver: true, winner: "player" });
+      addLog("Victory!");
+    } else if (allPlayerDead) {
+      set({ isBattleOver: true, winner: "enemy" });
+      addLog("Defeat...");
+    }
+
+    if (!allEnemiesDead && !allPlayerDead) {
+      get().nextTurn();
+    }
+  },
+
+  useItem: async (itemId, config) => {
+    const { turnOrder, currentTurnIndex, playerParty, enemies, addLog } = get();
+    const caster = turnOrder[currentTurnIndex];
+    if (!caster || caster.currentHp <= 0 || caster.isEnemy) return;
+
+    addLog(`${caster.name} used ${config.name}!`);
+
+    let nextPlayerParty = [...playerParty];
+    let nextEnemies = [...enemies];
+    let popups: Array<{ id: number, value: number, x: number, y: number }> = [];
+
+    await new Promise(r => setTimeout(r, 400)); // Short delay for item use
+
+    if (config.healHp) {
+      // Heal active character
+      const targetIndex = playerParty.findIndex(p => p.id === caster.id);
+      const healedHp = Math.min(caster.stats.hp, caster.currentHp + config.healHp);
+      const px = 60 + (targetIndex === 1 ? 20 : 0);
+      const py = 300 - 120 - (targetIndex * 50);
+      popups.push({ id: Date.now(), value: -config.healHp, x: px, y: py });
+      nextPlayerParty = nextPlayerParty.map(p => p.id === caster.id ? { ...p, currentHp: healedHp } : p);
+    }
+
+    if (config.damage) {
+      // Damage first alive enemy
+      const target = nextEnemies.find(e => e.currentHp > 0);
+      if (target) {
+        const targetIndex = nextEnemies.findIndex(e => e.id === target.id);
+        const newHp = Math.max(0, target.currentHp - config.damage);
+        const px = 400 - 120 - (targetIndex === 1 ? 20 : 0);
+        const py = 60 + (targetIndex * 60);
+        popups.push({ id: Date.now(), value: config.damage, x: px, y: py });
+        nextEnemies = nextEnemies.map(e => e.id === target.id ? { ...e, currentHp: newHp } : e);
+        if (newHp === 0) addLog(`${target.name} has been defeated!`);
+      }
+    }
+
+    set(state => ({ damagePopups: [...state.damagePopups, ...popups] }));
+
+    const allEnemiesDead = nextEnemies.every(e => e.currentHp <= 0);
+    const allPlayerDead = nextPlayerParty.every(p => p.currentHp <= 0);
+
+    set({
+      playerParty: nextPlayerParty,
+      enemies: nextEnemies,
+      turnOrder: determineTurnOrder([...nextPlayerParty, ...nextEnemies])
     });
 
     setTimeout(() => {
