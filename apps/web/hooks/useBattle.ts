@@ -9,6 +9,7 @@ export const useBattle = () => {
     currentTurnIndex, 
     isBattleOver, 
     attack, 
+    useSkill,
     startBattle 
   } = useBattleStore();
 
@@ -56,6 +57,7 @@ export const useBattle = () => {
     currentUnit,
     isBattleOver,
     attack,
+    useSkill,
     startBattle
   };
 };

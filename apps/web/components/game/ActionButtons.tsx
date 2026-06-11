@@ -9,6 +9,8 @@ interface ActionButtonsProps {
   onItem: () => void;
   onSwap: () => void;
   disabled?: boolean;
+  skillName?: string;
+  skillCooldown?: number;
 }
 
 export default function ActionButtons({
@@ -16,7 +18,9 @@ export default function ActionButtons({
   onSkill,
   onItem,
   onSwap,
-  disabled
+  disabled,
+  skillName,
+  skillCooldown = 0
 }: ActionButtonsProps) {
   return (
     <div className="grid grid-cols-2 gap-3 w-full max-w-md mx-auto p-4">
@@ -31,11 +35,18 @@ export default function ActionButtons({
       
       <button
         onClick={onSkill}
-        disabled={disabled}
-        className="flex items-center justify-center gap-2 h-14 text-lg font-bold bg-blue-700 hover:bg-blue-600 active:scale-95 transition-all rounded-xl border-b-4 border-blue-900 text-white disabled:opacity-50"
+        disabled={disabled || skillCooldown > 0}
+        className="relative flex flex-col items-center justify-center h-14 bg-blue-700 hover:bg-blue-600 active:scale-95 transition-all rounded-xl border-b-4 border-blue-900 text-white disabled:opacity-50 overflow-hidden"
       >
-        <Shield size={24} />
-        SKILL
+        <div className="flex items-center gap-1 font-bold">
+          <Shield size={18} />
+          {skillName || "SKILL"}
+        </div>
+        {skillCooldown > 0 && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-xl font-black text-white">
+            {skillCooldown}
+          </div>
+        )}
       </button>
 
       <button

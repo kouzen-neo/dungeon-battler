@@ -34,7 +34,8 @@ function GamePageContent() {
     enemies, 
     currentUnit, 
     isBattleOver, 
-    attack, 
+    attack,
+    useSkill, 
     startBattle 
   } = useBattle();
 
@@ -61,12 +62,14 @@ function GamePageContent() {
           stats: { ...hero.baseStats },
           currentHp: hero.baseStats.hp,
           isEnemy: false,
-          position: index === 0 ? 'FRONT' as const : index === 1 ? 'MID' as const : 'BACK' as const
+          position: index === 0 ? 'FRONT' as const : index === 1 ? 'MID' as const : 'BACK' as const,
+          skillCooldown: 0,
+          skill: hero.skill
         }))
       : [
-          { id: 'p1', name: 'Warrior', stats: { hp: 100, atk: 15, def: 5, spd: 10, element: 'FIRE' as const }, currentHp: 100, isEnemy: false, position: 'FRONT' as const },
-          { id: 'p2', name: 'Mage', stats: { hp: 80, atk: 20, def: 2, spd: 8, element: 'WATER' as const }, currentHp: 80, isEnemy: false, position: 'MID' as const },
-          { id: 'p3', name: 'Rogue', stats: { hp: 90, atk: 12, def: 4, spd: 15, element: 'WIND' as const }, currentHp: 90, isEnemy: false, position: 'BACK' as const },
+          { id: 'p1', name: 'Warrior', stats: { hp: 100, atk: 15, def: 5, spd: 10, element: 'FIRE' as const }, currentHp: 100, isEnemy: false, position: 'FRONT' as const, skillCooldown: 0 },
+          { id: 'p2', name: 'Mage', stats: { hp: 80, atk: 20, def: 2, spd: 8, element: 'WATER' as const }, currentHp: 80, isEnemy: false, position: 'MID' as const, skillCooldown: 0 },
+          { id: 'p3', name: 'Rogue', stats: { hp: 90, atk: 12, def: 4, spd: 15, element: 'WIND' as const }, currentHp: 90, isEnemy: false, position: 'BACK' as const, skillCooldown: 0 },
         ];
 
     startBattle(
@@ -77,7 +80,8 @@ function GamePageContent() {
         stats: e.stats,
         currentHp: e.stats.hp,
         isEnemy: true,
-        position: 'ENEMY' as const
+        position: 'ENEMY' as const,
+        skillCooldown: 0
       }))
     );
   }, [startBattle, floorData, ownedHeroes, partyIds]);
@@ -124,13 +128,17 @@ function GamePageContent() {
   );
 
   return (
-    <main className="flex flex-col min-h-screen bg-slate-950 text-white p-4 max-w-md mx-auto">
-      <div className="flex-1 flex flex-col gap-4">
-        <header className="py-4 text-center">
-          <h1 className="text-2xl font-black tracking-tighter text-red-500">DUNGEON BATTLER</h1>
-        </header>
+    <main className="flex flex-col h-[100dvh] bg-slate-950 text-white overflow-hidden max-w-md mx-auto relative">
+      {/* Header */}
+      <header className="flex-shrink-0 pt-4 pb-2 px-4 text-center">
+        <h1 className="text-xl font-black tracking-tighter text-red-500 uppercase">Dungeon Battler</h1>
+      </header>
 
-        <div className="relative">
+      {/* Main Game Area - Scrollable */}
+      <div className="flex-1 flex flex-col gap-3 px-4 pb-2 overflow-y-auto">
+        
+        {/* Canvas Area */}
+        <div className="w-full rounded-2xl overflow-hidden border-2 border-slate-800 shadow-md flex-shrink-0 bg-black aspect-[4/3] relative">
           <BattleCanvas 
             partySprites={resolvedPartySprites} 
             enemySprites={resolvedEnemySprites} 
@@ -138,46 +146,60 @@ function GamePageContent() {
             targetId={targetId}
             damagePopups={damagePopups}
           />
-          
-          <div className="absolute top-4 left-4 w-32 pointer-events-none">
+        </div>
+        
+        {/* Cards: Party & Enemies Side-by-Side */}
+        <div className="flex flex-row gap-3 flex-shrink-0">
+          <div className="flex-1 min-w-0">
             <PartyStatus party={playerParty} activeUnitId={currentUnit?.id} />
           </div>
-          
-          <div className="absolute top-4 right-4 w-32 pointer-events-none">
+          <div className="flex-1 min-w-0">
             <EnemyStatus enemies={enemies} activeUnitId={currentUnit?.id} />
           </div>
         </div>
 
-        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex-1 overflow-y-auto max-h-40">
-          <h2 className="text-xs font-bold text-slate-500 uppercase mb-2">Battle Log</h2>
-          {logs.map((log, i) => (
-            <p key={i} className={`text-sm mb-1 ${i === 0 ? 'text-white' : 'text-slate-400'}`}>
-              {log}
-            </p>
-          ))}
+        {/* Battle Log */}
+        <div className="flex-1 min-h-[100px] max-h-[150px] bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex flex-col overflow-hidden">
+          <h2 className="text-[10px] font-bold text-slate-500 uppercase mb-2 flex-shrink-0 border-b border-slate-800 pb-1">Battle Log</h2>
+          <div className="overflow-y-auto flex-1 flex flex-col justify-end">
+            <div className="space-y-1">
+              {logs.map((log, i) => (
+                <p key={i} className={`text-xs ${i === 0 ? 'text-white font-semibold' : 'text-slate-500'}`}>
+                  {log}
+                </p>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className="py-2">
-           <div className="flex justify-between items-end mb-1">
-             <span className="text-sm font-bold">{currentUnit?.name}'s Turn</span>
-             <span className="text-xs text-slate-500">Wait: {currentUnit?.stats.spd}ms</span>
+        {/* Turn Info & Progress */}
+        <div className="flex-shrink-0 bg-slate-900/30 p-2 rounded-xl border border-slate-800/50 mb-2">
+           <div className="flex justify-between items-end mb-1 px-1">
+             <span className="text-sm font-bold text-amber-400">{currentUnit?.name}'s Turn</span>
+             <span className="text-[10px] text-slate-500 font-mono uppercase">Wait: {currentUnit?.stats.spd}</span>
            </div>
-           <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-             <div className="h-full bg-red-500 w-1/2 animate-pulse" />
+           <div className="h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+             <div className="h-full bg-gradient-to-r from-red-600 to-amber-500 w-full animate-pulse" />
            </div>
         </div>
+      </div>
 
+      {/* Action Buttons Pinned to Bottom */}
+      <div className="flex-shrink-0 bg-slate-950 border-t border-slate-900 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-10">
         <ActionButtons 
           onAttack={handleAttack}
-          onSkill={() => console.log('Skill')}
+          onSkill={() => useSkill()}
           onItem={() => console.log('Item')}
           onSwap={() => setIsSwapping(true)}
           disabled={isBattleOver || currentUnit?.isEnemy || !!attackingId}
+          skillName={currentUnit?.skill?.name}
+          skillCooldown={currentUnit?.skillCooldown}
         />
       </div>
 
+      {/* Overlays (Victory/Defeat/Swap) */}
       {isBattleOver && (
-        <div className="fixed inset-0 bg-slate-950/90 flex items-center justify-center p-6 z-[100] animate-in fade-in duration-500">
+        <div className="absolute inset-0 bg-slate-950/90 flex items-center justify-center p-6 z-[100] animate-in fade-in duration-500">
           <div className="bg-slate-900 border-2 border-slate-800 p-8 rounded-3xl w-full max-w-xs text-center shadow-[0_0_50px_rgba(0,0,0,0.5)] pointer-events-auto">
             {winner === 'player' ? (
               <div className="flex flex-col items-center">
@@ -192,7 +214,7 @@ function GamePageContent() {
                 </div>
                 <button 
                   onClick={handleVictory}
-                  className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl shadow-[0_4px_0_rgb(153,27,27)] active:translate-y-1 active:shadow-none transition-all cursor-pointer relative z-[110]"
+                  className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl shadow-[0_4px_0_rgb(153,27,27)] active:translate-y-1 active:shadow-none transition-all cursor-pointer"
                 >
                   LANJUTKAN
                 </button>
@@ -206,7 +228,7 @@ function GamePageContent() {
                 <p className="text-slate-400 mb-6 font-bold">Jangan Menyerah!</p>
                 <Link 
                   href="/story"
-                  className="block w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all cursor-pointer relative z-[110]"
+                  className="block w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all cursor-pointer"
                 >
                   KEMBALI
                 </Link>
@@ -217,7 +239,7 @@ function GamePageContent() {
       )}
 
       {isSwapping && (
-        <div className="fixed inset-0 bg-slate-950/80 flex items-center justify-center p-6 z-[90] animate-in fade-in duration-300">
+        <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center p-6 z-[90] animate-in fade-in duration-300">
           <div className="bg-slate-900 border-2 border-slate-800 p-6 rounded-3xl w-full max-w-xs text-center shadow-[0_0_50px_rgba(0,0,0,0.8)]">
             <h2 className="text-xl font-black text-white mb-2 tracking-tighter">TUKAR POSISI</h2>
             <p className="text-xs text-slate-400 mb-6 font-bold uppercase tracking-wider">Tukar dengan {currentUnit?.name}:</p>

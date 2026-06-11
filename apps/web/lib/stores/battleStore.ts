@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { CombatStats, calculateDamage, determineTurnOrder } from "../game/combat";
+import { HeroSkill } from "../game/heroData";
 
 export type UnitPosition = 'FRONT' | 'MID' | 'BACK' | 'ENEMY';
 
@@ -10,6 +11,8 @@ export interface BattleUnit {
   currentHp: number;
   isEnemy: boolean;
   position: UnitPosition;
+  skillCooldown: number;
+  skill?: HeroSkill;
 }
 
 interface BattleState {
@@ -29,6 +32,7 @@ interface BattleState {
   startBattle: (party: BattleUnit[], enemies: BattleUnit[]) => void;
   nextTurn: () => void;
   attack: (targetId: string) => Promise<void>;
+  useSkill: () => Promise<void>;
   swapPositions: (id1: string, id2: string) => void;
   addLog: (log: string) => void;
   resetBattle: () => void;
@@ -141,6 +145,96 @@ export const useBattleStore = create<BattleState>((set, get) => ({
     }
   },
 
+  useSkill: async () => {
+    const { turnOrder, currentTurnIndex, playerParty, enemies, addLog } = get();
+    const caster = turnOrder[currentTurnIndex];
+    
+    if (!caster || caster.currentHp <= 0 || caster.isEnemy || !caster.skill || caster.skillCooldown > 0) return;
+
+    const skill = caster.skill;
+    addLog(`${caster.name} used ${skill.name}!`);
+
+    // Animation: Start (we just use the caster ID for animation)
+    set({ attackingId: caster.id });
+
+    let nextPlayerParty = [...playerParty];
+    let nextEnemies = [...enemies];
+    let popups: Array<{ id: number, value: number, x: number, y: number }> = [];
+
+    // Apply Cooldown
+    nextPlayerParty = nextPlayerParty.map(u => u.id === caster.id ? { ...u, skillCooldown: skill.cooldown } : u);
+
+    await new Promise(r => setTimeout(r, 600)); // Animation delay
+
+    if (skill.targetType === 'ALL_ALLIES' && skill.healPercentage) {
+      // Heal Party
+      nextPlayerParty = nextPlayerParty.map((u, i) => {
+        if (u.currentHp > 0) {
+          const healAmount = Math.floor(u.stats.hp * skill.healPercentage!);
+          const healedHp = Math.min(u.stats.hp, u.currentHp + healAmount);
+          popups.push({ id: Date.now() + i, value: -healAmount, x: 80, y: 150 - i*20 }); // Negative value shows as green/heal usually, but we'll just show it
+          return { ...u, currentHp: healedHp };
+        }
+        return u;
+      });
+      addLog(`Party recovered HP!`);
+    } else {
+      // Damage Enemies
+      let targets = [...nextEnemies].filter(e => e.currentHp > 0);
+      
+      if (skill.targetType === 'SINGLE_ENEMY') {
+        // Find highest HP enemy or random, let's just pick first alive
+        targets = [targets[0]];
+      } else if (skill.targetType === 'FRONT_MID_ENEMIES') {
+        targets = targets.filter(e => e.position === 'FRONT' || e.position === 'MID');
+        if (targets.length === 0) targets = [nextEnemies.filter(e => e.currentHp > 0)[0]]; // fallback
+      } // ALL_ENEMIES keeps all alive targets
+
+      targets.forEach((target, i) => {
+        // We override the attacker's ATK with multiplier before calculating damage
+        const tempStats = { ...caster.stats, atk: caster.stats.atk * (skill.damageMultiplier || 1) };
+        const damage = calculateDamage(tempStats, target.stats);
+        const newHp = Math.max(0, target.currentHp - damage);
+        
+        popups.push({ id: Date.now() + i, value: damage, x: 300, y: 150 - i*20 });
+        
+        nextEnemies = nextEnemies.map(e => e.id === target.id ? { ...e, currentHp: newHp } : e);
+        if (newHp === 0) {
+          addLog(`${target.name} has been defeated!`);
+        }
+      });
+    }
+
+    set(state => ({ damagePopups: [...state.damagePopups, ...popups] }));
+
+    const allEnemiesDead = nextEnemies.every(e => e.currentHp <= 0);
+    const allPlayerDead = nextPlayerParty.every(p => p.currentHp <= 0);
+
+    set({
+      playerParty: nextPlayerParty,
+      enemies: nextEnemies,
+      turnOrder: determineTurnOrder([...nextPlayerParty, ...nextEnemies]),
+      attackingId: null,
+      targetId: null,
+    });
+
+    setTimeout(() => {
+      set(state => ({ damagePopups: state.damagePopups.filter(p => !popups.find(po => po.id === p.id)) }));
+    }, 1000);
+
+    if (allEnemiesDead) {
+      set({ isBattleOver: true, winner: "player" });
+      addLog("Victory!");
+    } else if (allPlayerDead) {
+      set({ isBattleOver: true, winner: "enemy" });
+      addLog("Defeat...");
+    }
+
+    if (!allEnemiesDead && !allPlayerDead) {
+      get().nextTurn();
+    }
+  },
+
   swapPositions: (id1, id2) => {
     const { playerParty, addLog, nextTurn } = get();
     const unit1 = playerParty.find(u => u.id === id1);
@@ -173,7 +267,26 @@ export const useBattleStore = create<BattleState>((set, get) => ({
       while (state.turnOrder[nextIndex].currentHp <= 0) {
         nextIndex = (nextIndex + 1) % state.turnOrder.length;
       }
-      return { currentTurnIndex: nextIndex };
+      
+      const nextUnit = state.turnOrder[nextIndex];
+      
+      // Decrement cooldowns at the start of a new turn round?
+      // Actually simpler: just decrement the active unit's cooldown
+      let updatedParty = [...state.playerParty];
+      if (!nextUnit.isEnemy && nextUnit.skillCooldown > 0) {
+         updatedParty = updatedParty.map(u => 
+           u.id === nextUnit.id ? { ...u, skillCooldown: u.skillCooldown - 1 } : u
+         );
+      }
+
+      return { 
+        currentTurnIndex: nextIndex,
+        playerParty: updatedParty,
+        // Also update the turnOrder reference so currentUnit gets the updated cooldown
+        turnOrder: state.turnOrder.map(u => 
+          u.id === nextUnit.id && u.skillCooldown > 0 ? { ...u, skillCooldown: u.skillCooldown - 1 } : u
+        )
+      };
     });
   },
 }));
