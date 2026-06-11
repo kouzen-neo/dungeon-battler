@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, Repeat, ShoppingBag, User } from 'lucide-react';
+import { Home, BookOpen, Repeat, ShoppingBag, User, Users } from 'lucide-react';
 import { useHaptic } from '@/hooks/useHaptic';
 import { useAudioStore } from '@/lib/stores/audioStore';
 
@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { label: 'Home', icon: Home, href: '/' },
   { label: 'Story', icon: BookOpen, href: '/story' },
   { label: 'Endless', icon: Repeat, href: '/endless' },
-  { label: 'Shop', icon: ShoppingBag, href: '/shop' },
+  { label: 'Hero', icon: Users, href: '/hero' },
   { label: 'Profile', icon: User, href: '/profile' },
 ];
 

@@ -115,10 +115,10 @@ export default function ArchivePage() {
       </div>
 
       <Link 
-        href="/profile"
+        href="/hero"
         className="mt-8 block w-full py-4 bg-slate-900 hover:bg-slate-800 text-slate-400 font-black text-center rounded-2xl border border-slate-800 transition-all active:scale-95 text-xs uppercase"
       >
-        Kembali ke Profil
+        Kembali ke Hero Hub
       </Link>
     </main>
   );
