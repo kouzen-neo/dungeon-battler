@@ -45,7 +45,8 @@ function GamePageContent() {
     attack,
     useSkill, 
     useItem,
-    startBattle 
+    startBattle,
+    activeSkillName
   } = useBattle();
 
   const logs = useBattleStore((state) => state.logs);
