@@ -21,6 +21,7 @@ import { generateEndlessEnemies } from '@/lib/game/endlessGeneration';
 import { Trophy, Home, Coins, Flag, Sword } from 'lucide-react';
 import Link from 'next/link';
 import { useHeroStore } from '@/lib/stores/heroStore';
+import { useMissionStore } from '@/lib/stores/missionStore';
 
 const BATTLE_ITEMS = {
   'pot_small': { name: 'Small Potion', healHp: 20 },
@@ -129,6 +130,7 @@ function EndlessPageContent() {
     e.preventDefault();
     incrementFloor();
     addGold(rewardGold);
+    useMissionStore.getState().incrementBattle();
     await persistAll();
     // In endless, we might want to go straight to next floor or show a rest screen
     // For now, let's just refresh the same page to start next battle

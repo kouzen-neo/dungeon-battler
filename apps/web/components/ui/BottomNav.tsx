@@ -10,8 +10,8 @@ import { useAudioStore } from '@/lib/stores/audioStore';
 const NAV_ITEMS = [
   { label: 'Home', icon: Home, href: '/' },
   { label: 'Story', icon: BookOpen, href: '/story' },
-  { label: 'Endless', icon: Repeat, href: '/endless' },
   { label: 'Hero', icon: Users, href: '/hero' },
+  { label: 'Shop', icon: ShoppingBag, href: '/shop' },
   { label: 'Profile', icon: User, href: '/profile' },
 ];
 

@@ -15,7 +15,7 @@ type HeroTab = 'MANAGEMENT' | 'SUMMON' | 'ARCHIVE';
 
 export default function HeroHubPage() {
   const [activeTab, setActiveTab] = useState<HeroTab>('MANAGEMENT');
-  const { ownedHeroes, partyIds, setParty, levelUpHero } = useHeroStore();
+  const { ownedHeroes, partyIds, shards, setParty, levelUpHero, upgradeStar } = useHeroStore();
   const gold = useStoryStore((state) => state.gold);
   const gems = useStoryStore((state) => state.gems);
   const [selectedHero, setSelectedHero] = useState<OwnedHero | null>(ownedHeroes[0]);
@@ -39,6 +39,21 @@ export default function HeroHubPage() {
       }
     }
   };
+
+  const handleUpgradeStar = async () => {
+    if (selectedHero) {
+      const success = await upgradeStar(selectedHero.instanceId);
+      if (success) {
+        const updated = useHeroStore.getState().ownedHeroes.find(h => h.instanceId === selectedHero.instanceId);
+        if (updated) setSelectedHero(updated);
+      } else {
+        alert("Not enough shards!");
+      }
+    }
+  };
+
+  const currentHeroShards = selectedHero ? (shards[selectedHero.id] || 0) : 0;
+  const starUpgradeCost = selectedHero ? [0, 20, 50, 100, 200][selectedHero.stars] : 0;
 
   return (
     <main className="flex flex-col min-h-screen bg-slate-950 text-white max-w-md mx-auto relative overflow-hidden">
@@ -94,7 +109,14 @@ export default function HeroHubPage() {
                     <PixelSprite spriteId={selectedHero.id} element={selectedHero.baseStats.element} size={48} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black">{selectedHero.name}</h2>
+                    <div className="flex items-center gap-2 mb-1">
+                       <h2 className="text-xl font-black">{selectedHero.name}</h2>
+                       <div className="flex text-amber-500">
+                          {Array.from({ length: selectedHero.stars }).map((_, i) => (
+                            <Sparkles key={i} size={10} fill="currentColor" />
+                          ))}
+                       </div>
+                    </div>
                     <div className="flex gap-2 items-center">
                       <span className="text-[10px] bg-red-600 px-2 py-0.5 rounded font-bold uppercase">{selectedHero.rarity}</span>
                       <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">LV. {selectedHero.level} • {selectedHero.type}</span>
@@ -109,13 +131,35 @@ export default function HeroHubPage() {
                   <HeroStat icon={<Zap size={14} />} label="SPD" value={selectedHero.baseStats.spd} color="text-yellow-500" />
                 </div>
 
-                <button
-                  onClick={handleLevelUp}
-                  className="w-full py-4 bg-green-600 hover:bg-green-500 text-white font-black rounded-2xl shadow-[0_4px_0_rgb(21,128,61)] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2"
-                >
-                  <ArrowUpCircle size={20} />
-                  LEVEL UP ({selectedHero.level * 50}G)
-                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleLevelUp}
+                    className="py-4 bg-green-600 hover:bg-green-500 text-white font-black rounded-2xl shadow-[0_4px_0_rgb(21,128,61)] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2 text-xs"
+                  >
+                    <ArrowUpCircle size={16} />
+                    UP LV ({selectedHero.level * 50}G)
+                  </button>
+                  <button
+                    onClick={handleUpgradeStar}
+                    disabled={selectedHero.stars >= 5 || currentHeroShards < starUpgradeCost}
+                    className={`
+                      py-4 font-black rounded-2xl transition-all flex flex-col items-center justify-center relative overflow-hidden text-xs
+                      ${selectedHero.stars >= 5 
+                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
+                        : currentHeroShards >= starUpgradeCost
+                          ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-[0_4px_0_rgb(180,83,9)] active:translate-y-1 active:shadow-none'
+                          : 'bg-slate-900 text-slate-600 border border-slate-800'}
+                    `}
+                  >
+                    <div className="flex items-center gap-1">
+                      <Sparkles size={16} fill={currentHeroShards >= starUpgradeCost ? "black" : "none"} />
+                      <span>EVOLVE</span>
+                    </div>
+                    <span className={`text-[8px] font-black ${currentHeroShards >= starUpgradeCost ? 'text-amber-900' : 'text-slate-500'}`}>
+                      {currentHeroShards}/{starUpgradeCost} SHARDS
+                    </span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -140,6 +184,13 @@ export default function HeroHubPage() {
                   >
                     <PixelSprite spriteId={hero.id} element={hero.baseStats.element} size={36} cropToHead={true} />
                     <span className="text-[8px] font-black text-slate-400 truncate w-full px-1 text-center uppercase tracking-tighter">{hero.name.split(' ')[0]}</span>
+                    
+                    {/* Stars indicator on icon */}
+                    <div className="absolute bottom-1 right-1 flex gap-0.5">
+                       {Array.from({ length: hero.stars }).map((_, i) => (
+                         <div key={i} className="w-1 h-1 bg-amber-500 rounded-full" />
+                       ))}
+                    </div>
                     
                     <div 
                       onClick={(e) => { e.stopPropagation(); toggleParty(hero.instanceId); }}

@@ -170,9 +170,10 @@ export default function BattleCanvas({
         ctx.filter = 'none';
       });
 
-      // Skill Animations
+      // Skill & Ultimate Animations
       if (activeSkillName) {
         const skillName = activeSkillName.toLowerCase();
+        const isUltimate = skillName.includes('ultimate');
         
         // Find target center
         let tx = canvas.width - 120;
@@ -180,7 +181,6 @@ export default function BattleCanvas({
         
         if (targetId) {
           const firstTargetId = targetId.split(',')[0];
-          // Try to find if it's an enemy
           const eIdx = enemyIds.indexOf(firstTargetId);
           if (eIdx !== -1) {
             tx = canvas.width - 120 - (eIdx === 1 ? 20 : 0) + (SPRITE_SIZE*PIXEL_SIZE)/2;
@@ -195,49 +195,80 @@ export default function BattleCanvas({
         }
         
         ctx.save();
+        
+        // Ultimate Backdrop Dimming
+        if (isUltimate) {
+           ctx.fillStyle = `rgba(0, 0, 0, ${0.7 + Math.sin(frame * 0.2) * 0.1})`;
+           ctx.fillRect(0, 0, canvas.width, canvas.height);
+           
+           // Background speed lines for ultimate
+           ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+           ctx.lineWidth = 1;
+           for(let i=0; i<10; i++) {
+             const ly = (i * 40 + frame * 10) % canvas.height;
+             ctx.beginPath();
+             ctx.moveTo(0, ly);
+             ctx.lineTo(canvas.width, ly);
+             ctx.stroke();
+           }
+        }
+
         if (skillName.includes('cleave') || skillName.includes('slash') || skillName.includes('strike')) {
-          // Slash centered on tx, ty
+          // Inferno / Slash
+          const color = skillName.includes('inferno') ? '239, 68, 68' : '255, 255, 255';
+          const size = isUltimate ? 150 : 60;
           ctx.beginPath();
-          ctx.moveTo(tx - 60, ty - 80);
-          ctx.lineTo(tx + 80, ty + 60);
-          ctx.strokeStyle = `rgba(255, 255, 255, ${Math.random()})`;
-          ctx.lineWidth = 15;
+          ctx.moveTo(tx - size, ty - size);
+          ctx.lineTo(tx + size, ty + size);
+          ctx.strokeStyle = `rgba(${color}, ${Math.random()})`;
+          ctx.lineWidth = isUltimate ? 30 : 15;
           ctx.stroke();
-          ctx.strokeStyle = `rgba(220, 38, 38, ${Math.random() * 0.5})`; // red-600
-          ctx.lineWidth = 30;
+          ctx.strokeStyle = `rgba(${color}, ${Math.random() * 0.5})`;
+          ctx.lineWidth = isUltimate ? 60 : 30;
           ctx.stroke();
-        } else if (skillName.includes('elemental') || skillName.includes('burst') || skillName.includes('fire')) {
-          // Giant flickering explosions around target area
-          for(let i=0; i<4; i++) {
+          
+          if (isUltimate) {
+            // Extra circular shockwave
             ctx.beginPath();
-            ctx.arc(tx + (Math.random()*80-40), ty + (Math.random()*80-40), 30 + Math.random()*50, 0, Math.PI*2);
-            ctx.fillStyle = `rgba(239, 68, 68, ${Math.random() * 0.8})`; // red-500
-            ctx.fill();
+            ctx.arc(tx, ty, (frame % 30) * 4, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.stroke();
+          }
+        } else if (skillName.includes('elemental') || skillName.includes('burst') || skillName.includes('fire') || skillName.includes('zero')) {
+          // Zero / Burst
+          const count = isUltimate ? 12 : 4;
+          for(let i=0; i<count; i++) {
             ctx.beginPath();
-            ctx.arc(tx + (Math.random()*80-40), ty + (Math.random()*80-40), 20 + Math.random()*30, 0, Math.PI*2);
-            ctx.fillStyle = `rgba(250, 204, 21, ${Math.random() * 0.9})`; // yellow-400
+            const rx = tx + (Math.random()*(isUltimate ? 200 : 80)-(isUltimate ? 100 : 40));
+            const ry = ty + (Math.random()*(isUltimate ? 200 : 80)-(isUltimate ? 100 : 40));
+            ctx.arc(rx, ry, (isUltimate ? 50 : 30) + Math.random()*50, 0, Math.PI*2);
+            ctx.fillStyle = skillName.includes('zero') ? `rgba(186, 230, 253, ${Math.random()})` : `rgba(239, 68, 68, ${Math.random() * 0.8})`;
             ctx.fill();
           }
-        } else if (skillName.includes('holy') || skillName.includes('light') || skillName.includes('heal')) {
-          // Golden/Green columns of light over party
-          ctx.fillStyle = `rgba(132, 204, 22, ${Math.random() * 0.3})`; // lime-500
-          ctx.fillRect(tx - 60, 0, 120, canvas.height);
-          ctx.fillStyle = `rgba(254, 240, 138, ${Math.random() * 0.6})`; // yellow-200
-          ctx.fillRect(tx - 30, 0, 60, canvas.height);
-        } else if (skillName.includes('assassinate') || skillName.includes('shadow')) {
-          // Screen darkens, sharp purple slash exactly on tx, ty
-          ctx.fillStyle = `rgba(0, 0, 0, 0.6)`;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.beginPath();
-          ctx.moveTo(tx - 50, ty - 50);
-          ctx.lineTo(tx + 50, ty + 50);
-          ctx.strokeStyle = `rgba(168, 85, 247, ${Math.random()})`; // purple-500
-          ctx.lineWidth = 12;
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(tx + 50, ty - 50);
-          ctx.lineTo(tx - 50, ty + 50);
-          ctx.stroke();
+        } else if (skillName.includes('holy') || skillName.includes('light') || skillName.includes('heal') || skillName.includes('aegis')) {
+          // Aegis / Holy
+          ctx.fillStyle = skillName.includes('aegis') ? `rgba(251, 191, 36, ${0.4 + Math.random() * 0.3})` : `rgba(132, 204, 22, ${Math.random() * 0.3})`;
+          if (isUltimate) {
+             ctx.fillRect(0, 0, canvas.width, canvas.height); // Fullscreen wash for Aegis
+          } else {
+             ctx.fillRect(tx - 60, 0, 120, canvas.height);
+          }
+        } else if (skillName.includes('assassinate') || skillName.includes('shadow') || skillName.includes('dance') || skillName.includes('nightfall')) {
+          // Nightfall / Dance
+          ctx.fillStyle = `rgba(0, 0, 0, 0.8)`;
+          if (isUltimate) ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          const lines = isUltimate ? 8 : 2;
+          for(let i=0; i<lines; i++) {
+            ctx.beginPath();
+            const ox = (Math.random() - 0.5) * 100;
+            const oy = (Math.random() - 0.5) * 100;
+            ctx.moveTo(tx - 50 + ox, ty - 50 + oy);
+            ctx.lineTo(tx + 50 + ox, ty + 50 + oy);
+            ctx.strokeStyle = `rgba(168, 85, 247, ${Math.random()})`;
+            ctx.lineWidth = 12;
+            ctx.stroke();
+          }
         }
         ctx.restore();
       }

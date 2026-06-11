@@ -21,6 +21,7 @@ import { storyChapter1 } from '@/lib/game/storyData';
 import { Trophy, Home, Coins, Flag } from 'lucide-react';
 import Link from 'next/link';
 import { useHeroStore } from '@/lib/stores/heroStore';
+import { useMissionStore } from '@/lib/stores/missionStore';
 
 // Simple item definitions for use in battle
 const BATTLE_ITEMS = {
@@ -129,6 +130,7 @@ function GamePageContent() {
     e.stopPropagation();
     console.log("Victory handled");
     completeFloor(floorNum, floorData.rewardGold);
+    useMissionStore.getState().incrementBattle();
     await persistAll();
     router.replace('/story');
   };
