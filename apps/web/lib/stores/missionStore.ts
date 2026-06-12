@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useStoryStore } from './storyProgress';
+import { useStoryStore } from '../game/storyProgress';
 import { useSaveStore } from './saveStore';
 
 export interface Mission {
