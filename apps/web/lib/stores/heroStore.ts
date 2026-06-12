@@ -18,6 +18,7 @@ interface HeroState {
   pityCounter: number;
   
   pullGacha: () => Promise<{ hero: OwnedHero | null, isNew: boolean, shardsAwarded?: number }>;
+  pullGachaTen: () => Promise<Array<{ hero: OwnedHero, isNew: boolean, shardsAwarded?: number }>>;
   setParty: (ids: string[]) => void;
   levelUpHero: (instanceId: string) => Promise<boolean>;
   upgradeStar: (instanceId: string) => Promise<boolean>;
@@ -140,6 +141,69 @@ export const useHeroStore = create<HeroState>((set, get) => ({
     useMissionStore.getState().incrementSummon();
     await save.persistAll();
     return { hero: newHero, isNew: true };
+  },
+
+  pullGachaTen: async () => {
+    const story = useStoryStore.getState();
+    const gachaCost = 900; // Discounted for 10 pulls
+
+    if (story.gems < gachaCost) return [];
+
+    const results: Array<{ hero: OwnedHero, isNew: boolean, shardsAwarded?: number }> = [];
+    
+    useStoryStore.setState({ gems: story.gems - gachaCost });
+    
+    for (let i = 0; i < 10; i++) {
+      const { pityCounter, ownedHeroes } = get();
+      
+      const newPity = pityCounter + 1;
+      let rolledRarity: "R" | "SR" | "SSR" = "R";
+
+      if (newPity >= 50) {
+        rolledRarity = "SSR";
+        set({ pityCounter: 0 });
+      } else {
+        const roll = Math.random() * 100;
+        if (roll < 5) {
+          rolledRarity = "SSR";
+          set({ pityCounter: 0 });
+        } else if (roll < 30) {
+          rolledRarity = "SR";
+          set({ pityCounter: newPity });
+        } else {
+          rolledRarity = "R";
+          set({ pityCounter: newPity });
+        }
+      }
+
+      const possibleHeroes = Object.values(heroTemplates).filter(h => h.rarity === rolledRarity);
+      const rolled = possibleHeroes[Math.floor(Math.random() * possibleHeroes.length)];
+      
+      const existingHero = ownedHeroes.find(h => h.id === rolled.id);
+      
+      if (existingHero) {
+        const shardMap = { "R": 10, "SR": 30, "SSR": 100 };
+        const amount = shardMap[rolledRarity];
+        set(state => ({
+          shards: { ...state.shards, [rolled.id]: (state.shards[rolled.id] || 0) + amount }
+        }));
+        results.push({ hero: existingHero, isNew: false, shardsAwarded: amount });
+      } else {
+        const newHero: OwnedHero = {
+          ...rolled,
+          instanceId: Math.random().toString(36).substr(2, 9),
+          level: 1,
+          stars: 1,
+          exp: 0,
+        };
+        set((state) => ({ ownedHeroes: [...state.ownedHeroes, newHero] }));
+        results.push({ hero: newHero, isNew: true });
+      }
+      useMissionStore.getState().incrementSummon();
+    }
+
+    await useSaveStore.getState().persistAll();
+    return results;
   },
 
   setParty: (ids) => {

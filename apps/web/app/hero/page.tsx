@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import PixelSprite from '@/components/ui/PixelSprite';
+import { useHaptic } from '@/hooks/useHaptic';
 
 type HeroTab = 'MANAGEMENT' | 'SUMMON' | 'ARCHIVE';
 
@@ -19,8 +20,10 @@ export default function HeroHubPage() {
   const gold = useStoryStore((state) => state.gold);
   const gems = useStoryStore((state) => state.gems);
   const [selectedHero, setSelectedHero] = useState<OwnedHero | null>(ownedHeroes[0]);
+  const { vibrate } = useHaptic();
 
   const toggleParty = (id: string) => {
+    vibrate(10);
     if (partyIds.includes(id)) {
       setParty(partyIds.filter(pid => pid !== id));
     } else if (partyIds.length < 3) {
@@ -32,6 +35,7 @@ export default function HeroHubPage() {
     if (selectedHero) {
       const success = await levelUpHero(selectedHero.instanceId);
       if (success) {
+        vibrate(20);
         const updated = useHeroStore.getState().ownedHeroes.find(h => h.instanceId === selectedHero.instanceId);
         if (updated) setSelectedHero(updated);
       } else {
@@ -44,6 +48,7 @@ export default function HeroHubPage() {
     if (selectedHero) {
       const success = await upgradeStar(selectedHero.instanceId);
       if (success) {
+        vibrate([30, 50, 30]); // Distinct evolution feel
         const updated = useHeroStore.getState().ownedHeroes.find(h => h.instanceId === selectedHero.instanceId);
         if (updated) setSelectedHero(updated);
       } else {
@@ -125,10 +130,34 @@ export default function HeroHubPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-6">
-                  <HeroStat icon={<Heart size={14} />} label="HP" value={selectedHero.baseStats.hp} color="text-green-500" />
-                  <HeroStat icon={<Sword size={14} />} label="ATK" value={selectedHero.baseStats.atk} color="text-red-500" />
-                  <HeroStat icon={<Shield size={14} />} label="DEF" value={selectedHero.baseStats.def} color="text-blue-500" />
-                  <HeroStat icon={<Zap size={14} />} label="SPD" value={selectedHero.baseStats.spd} color="text-yellow-500" />
+                  <HeroStat 
+                    icon={<Heart size={14} />} 
+                    label="HP" 
+                    value={selectedHero.baseStats.hp} 
+                    nextValue={Math.floor(selectedHero.baseStats.hp * 1.1)}
+                    color="text-green-500" 
+                  />
+                  <HeroStat 
+                    icon={<Sword size={14} />} 
+                    label="ATK" 
+                    value={selectedHero.baseStats.atk} 
+                    nextValue={Math.floor(selectedHero.baseStats.atk * 1.1)}
+                    color="text-red-500" 
+                  />
+                  <HeroStat 
+                    icon={<Shield size={14} />} 
+                    label="DEF" 
+                    value={selectedHero.baseStats.def} 
+                    nextValue={Math.floor(selectedHero.baseStats.def * 1.1)}
+                    color="text-blue-500" 
+                  />
+                  <HeroStat 
+                    icon={<Zap size={14} />} 
+                    label="SPD" 
+                    value={selectedHero.baseStats.spd} 
+                    nextValue={selectedHero.baseStats.spd}
+                    color="text-yellow-500" 
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -234,13 +263,23 @@ function TabButton({ active, onClick, label, icon }: { active: boolean, onClick:
   );
 }
 
-function HeroStat({ icon, label, value, color }: { icon: any, label: string, value: number, color: string }) {
+function HeroStat({ icon, label, value, nextValue, color }: { icon: any, label: string, value: number, nextValue?: number, color: string }) {
+  const diff = nextValue ? nextValue - value : 0;
+  
   return (
-    <div className="bg-slate-950/50 p-2 rounded-xl flex items-center gap-2 border border-slate-800/50">
-      <div className={`${color} opacity-50`}>{icon}</div>
-      <div className="flex flex-col">
-        <span className="text-[8px] font-black text-slate-500 leading-none uppercase">{label}</span>
-        <span className="text-sm font-black leading-none tabular-nums">{value}</span>
+    <div className="bg-slate-950/50 p-2 rounded-xl flex items-center gap-2 border border-slate-800/50 group hover:border-slate-700 transition-all">
+      <div className={`${color} opacity-50 group-hover:opacity-100 transition-opacity`}>{icon}</div>
+      <div className="flex flex-col flex-1 min-w-0">
+        <span className="text-[8px] font-black text-slate-500 leading-none uppercase tracking-tighter">{label}</span>
+        <div className="flex items-center gap-1.5 mt-0.5">
+           <span className="text-sm font-black leading-none tabular-nums text-white">{value}</span>
+           {diff > 0 && (
+             <div className="flex items-center text-[10px] font-black text-green-500 animate-in slide-in-from-left-1">
+                <ArrowUpCircle size={8} fill="currentColor" className="text-green-500/20" />
+                <span>{nextValue}</span>
+             </div>
+           )}
+        </div>
       </div>
     </div>
   );
@@ -249,47 +288,79 @@ function HeroStat({ icon, label, value, color }: { icon: any, label: string, val
 // Minimal embedded version of gacha page
 function GachaEmbed() {
   const pullGacha = useHeroStore((state) => state.pullGacha);
+  const pullGachaTen = useHeroStore((state) => state.pullGachaTen);
   const pityCounter = useHeroStore((state) => state.pityCounter);
   const gems = useStoryStore((state) => state.gems);
+  const { vibrate } = useHaptic();
   
   const [isPulling, setIsPulling] = useState(false);
-  const [result, setResult] = useState<OwnedHero | null>(null);
+  const [results, setResults] = useState<Array<{ hero: OwnedHero, isNew: boolean, shardsAwarded?: number }>>([]);
 
-  const handlePull = async () => {
-    if (gems < 100) {
+  const handlePull = async (isTen: boolean) => {
+    const cost = isTen ? 900 : 100;
+    if (gems < cost) {
       alert("Not enough gems!");
       return;
     }
+    vibrate([20, 20, 20]); // Anticipation vibration
     setIsPulling(true);
-    setResult(null);
+    setResults([]);
+    
     setTimeout(async () => {
-      const hero = await pullGacha();
-      setResult(hero);
+      if (isTen) {
+        const data = await pullGachaTen();
+        setResults(data);
+      } else {
+        const data = await pullGacha();
+        if (data.hero) {
+          setResults([{ hero: data.hero, isNew: data.isNew, shardsAwarded: data.shardsAwarded }]);
+        }
+      }
       setIsPulling(false);
+      vibrate([50, 100, 50]); // Success vibration
     }, 1500);
   };
 
-  if (result) {
+  const getRarityStyle = (rarity: string) => {
+    if (rarity === 'SSR') return 'border-amber-500 shadow-[0_0_30px_rgba(251,191,36,0.5)] bg-amber-950/20';
+    if (rarity === 'SR') return 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.3)] bg-purple-950/20';
+    return 'border-slate-800 bg-slate-900';
+  };
+
+  if (results.length > 0) {
     return (
-      <div className="text-center space-y-6 animate-in fade-in zoom-in duration-500 py-8">
-        <div className="relative">
-           <div className="w-56 h-72 bg-slate-900 border-4 border-red-500 rounded-[40px] p-6 shadow-[0_0_60px_rgba(220,38,38,0.4)] flex flex-col items-center justify-center gap-4 mx-auto relative z-10 overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5">
-                <span className="text-9xl font-black italic">{result.rarity}</span>
-              </div>
-              <PixelSprite spriteId={result.id} element={result.baseStats.element} size={96} />
-              <div className="text-center">
-                <span className="text-[10px] bg-red-600 px-3 py-1 rounded-full font-bold uppercase mb-2 inline-block">
-                  {result.rarity}
-                </span>
-                <h2 className="text-2xl font-black tracking-tight uppercase leading-none">{result.name}</h2>
-                <p className="text-[10px] font-black text-slate-500 uppercase mt-1">{result.type}</p>
-              </div>
+      <div className="text-center space-y-6 animate-in fade-in zoom-in duration-500 py-4 h-full flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-2">
+           <div className={`grid ${results.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+             {results.map((res, i) => (
+               <div 
+                 key={i} 
+                 className={`
+                   relative p-4 rounded-3xl border-2 transition-all flex flex-col items-center justify-center gap-2 overflow-hidden
+                   ${getRarityStyle(res.hero.rarity)}
+                   animate-in zoom-in slide-in-from-bottom-2 duration-500
+                 `}
+                 style={{ animationDelay: `${i * 100}ms` }}
+               >
+                  <PixelSprite spriteId={res.hero.id} element={res.hero.baseStats.element} size={results.length > 1 ? 48 : 96} />
+                  <div className="text-center">
+                    <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase mb-1 inline-block ${res.hero.rarity === 'SSR' ? 'bg-amber-500 text-black' : 'bg-slate-800 text-white'}`}>
+                      {res.hero.rarity}
+                    </span>
+                    <h3 className={`${results.length > 1 ? 'text-xs' : 'text-xl'} font-black uppercase leading-tight truncate`}>{res.hero.name}</h3>
+                    {res.isNew ? (
+                      <p className="text-[8px] font-black text-red-500 animate-pulse mt-1">NEW HERO!</p>
+                    ) : (
+                      <p className="text-[8px] font-black text-amber-500 mt-1">+{res.shardsAwarded} SHARDS</p>
+                    )}
+                  </div>
+               </div>
+             ))}
            </div>
         </div>
         <button
-          onClick={() => setResult(null)}
-          className="w-full py-4 bg-red-600 hover:bg-red-500 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg active:scale-95"
+          onClick={() => setResults([])}
+          className="w-full py-4 bg-red-600 hover:bg-red-500 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg active:scale-95 shrink-0"
         >
           AWESOME!
         </button>
@@ -312,17 +383,43 @@ function GachaEmbed() {
       </div>
 
       <div className="space-y-1">
-        <h2 className="text-2xl font-black italic tracking-tighter">HERO SUMMON</h2>
-        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">100 Gems / Pull</p>
+        <h2 className="text-2xl font-black italic tracking-tighter uppercase">Hero Summon</h2>
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rate Up: Shadow Blade (SSR)</p>
       </div>
 
-      <button
-        onClick={handlePull}
-        disabled={isPulling}
-        className="w-full py-6 bg-red-600 hover:bg-red-500 rounded-3xl text-xl font-black italic tracking-tight shadow-[0_8px_0_rgb(153,27,27)] active:translate-y-2 active:shadow-none transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-      >
-        <Sparkles fill="white" /> {isPulling ? 'SUMMONING...' : 'SUMMON NOW'}
-      </button>
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={() => handlePull(false)}
+          disabled={isPulling}
+          className="w-full py-4 bg-slate-900 hover:bg-slate-800 border-2 border-slate-800 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+        >
+          <div className="flex items-center gap-1.5">
+             <Gem size={14} className="text-cyan-400" />
+             <span className="text-cyan-400">100</span>
+          </div>
+          <span className="text-white uppercase tracking-widest">Single Summon</span>
+        </button>
+
+        <button
+          onClick={() => handlePull(true)}
+          disabled={isPulling}
+          className="w-full py-6 bg-red-600 hover:bg-red-500 rounded-3xl text-xl font-black italic tracking-tight shadow-[0_8px_0_rgb(153,27,27)] active:translate-y-2 active:shadow-none transition-all flex flex-col items-center justify-center disabled:opacity-50 relative overflow-hidden"
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles fill="white" size={20} />
+            <span>SUMMON X10</span>
+          </div>
+          <div className="flex items-center gap-1 mt-1">
+             <Gem size={10} className="text-red-200" />
+             <span className="text-xs text-red-100 font-bold strike-through opacity-50">1000</span>
+             <span className="text-xs text-white font-black">900 GEMS</span>
+          </div>
+          {/* Discount Tag */}
+          <div className="absolute top-2 right-2 bg-amber-400 text-amber-950 text-[8px] font-black px-2 py-0.5 rounded-full transform rotate-12 shadow-md">
+             10% OFF
+          </div>
+        </button>
+      </div>
     </div>
   );
 }

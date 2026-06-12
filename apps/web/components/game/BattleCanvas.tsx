@@ -117,57 +117,80 @@ export default function BattleCanvas({
       // Party Positions (Draw from back to front so they overlap correctly)
       [...partySprites].reverse().forEach((sprite, reversedI) => {
         const i = partySprites.length - 1 - reversedI;
-        const id = partyIds[i]; // Use real ID instead of hardcoded 'p1'
-        let x = 60 + (i === 1 ? 20 : 0); // Stagger formation slightly
+        const id = partyIds[i];
+        const isActive = id === activeUnitId;
+        const isAttacking = attackingId === id;
+        const isTarget = targetId?.includes(id);
+
+        let x = 60 + (i === 1 ? 20 : 0);
         let y = canvas.height - 120 - (i * 50);
         
-        // Idle Animation (Floating)
+        // Idle Animation
         y += Math.sin(frame * 0.1 + i) * 3;
 
-        // Attack Animation
-        if (attackingId === id) {
-          x += 40; // Jump forward
-          
-          // Attack blur
-          ctx.globalAlpha = 0.5;
-          drawSprite(ctx, sprite, x - 20, y);
-          ctx.globalAlpha = 1.0;
-        }
-        
-        // Hit Animation (Shake)
-        if (targetId?.includes(id)) {
-          x += Math.sin(frame * 0.8) * 8;
-          ctx.filter = 'brightness(200%) sepia(100%) hue-rotate(-50deg) saturate(500%)';
+        const scale = isActive ? 1.1 + Math.sin(frame * 0.1) * 0.05 : 1.0;
+
+        ctx.save();
+        ctx.translate(x + (SPRITE_SIZE * PIXEL_SIZE) / 2, y + (SPRITE_SIZE * PIXEL_SIZE) / 2);
+        ctx.scale(scale, scale);
+        ctx.translate(-(SPRITE_SIZE * PIXEL_SIZE) / 2, -(SPRITE_SIZE * PIXEL_SIZE) / 2);
+
+        if (isActive) {
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = 'rgba(255, 255, 255, 0.4)';
         }
 
-        drawShadow(x, y, id === activeUnitId);
-        drawSprite(ctx, sprite, x, y);
-        ctx.filter = 'none'; // Reset filter
+        if (isAttacking) {
+          ctx.translate(40, -Math.abs(Math.sin(frame * 0.4)) * 10);
+        }
+
+        if (isTarget) {
+          ctx.translate((Math.random() - 0.5) * 6, 0);
+          ctx.filter = 'brightness(1.5) saturate(1.5)';
+        }
+
+        drawShadow(0, 0, isActive);
+        drawSprite(ctx, sprite, 0, 0);
+        ctx.restore();
       });
 
       // Enemy Positions
       enemySprites.forEach((sprite, i) => {
-        const id = enemyIds[i]; // Use real ID instead of hardcoded 'e1'
+        const id = enemyIds[i];
+        const isActive = id === activeUnitId;
+        const isAttacking = attackingId === id;
+        const isTarget = targetId?.includes(id);
+
         let x = canvas.width - 120 - (i === 1 ? 20 : 0);
         let y = 60 + (i * 60);
 
-        y += Math.sin(frame * 0.08 + i) * 4;
+        // Idle Animation
+        y += Math.sin(frame * 0.1 + i) * 3;
 
-        if (attackingId === id) {
-          x -= 40;
-          ctx.globalAlpha = 0.5;
-          drawSprite(ctx, sprite, x + 20, y, PIXEL_SIZE, true);
-          ctx.globalAlpha = 1.0;
+        const scale = isActive ? 1.1 + Math.sin(frame * 0.1) * 0.05 : 1.0;
+
+        ctx.save();
+        ctx.translate(x + (SPRITE_SIZE * PIXEL_SIZE) / 2, y + (SPRITE_SIZE * PIXEL_SIZE) / 2);
+        ctx.scale(scale, scale);
+        ctx.translate(-(SPRITE_SIZE * PIXEL_SIZE) / 2, -(SPRITE_SIZE * PIXEL_SIZE) / 2);
+
+        if (isActive) {
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = 'rgba(255, 255, 255, 0.4)';
         }
 
-        if (targetId?.includes(id)) {
-          x += Math.sin(frame * 0.8) * 8;
-          ctx.filter = 'brightness(200%) sepia(100%) hue-rotate(-50deg) saturate(500%)';
+        if (isAttacking) {
+          ctx.translate(-40, -Math.abs(Math.sin(frame * 0.4)) * 10);
         }
 
-        drawShadow(x, y, id === activeUnitId);
-        drawSprite(ctx, ctx.filter !== 'none' ? sprite : sprite, x, y, PIXEL_SIZE, true); // Keep original sprite reference but filter handles the color
-        ctx.filter = 'none';
+        if (isTarget) {
+          ctx.translate((Math.random() - 0.5) * 6, 0);
+          ctx.filter = 'brightness(1.5) saturate(1.5)';
+        }
+
+        drawShadow(0, 0, isActive);
+        drawSprite(ctx, sprite, 0, 0);
+        ctx.restore();
       });
 
       // Skill & Ultimate Animations
@@ -339,6 +362,13 @@ export default function BattleCanvas({
         
         ctx.strokeText(displayVal, 0, 0);
         ctx.fillText(displayVal, 0, 0);
+
+        if (!isHeal && popup.value > 100) {
+           ctx.font = 'black 10px "Inter", sans-serif';
+           ctx.fillStyle = '#fbbf24';
+           ctx.fillText('CRITICAL!', 0, -25);
+        }
+
         ctx.restore();
       });
       ctx.globalAlpha = 1.0;
